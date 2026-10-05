@@ -1,0 +1,52 @@
+---
+description: Project-wide rules for the Job Application Tracker (React + FastAPI + PostgreSQL)
+alwaysApply: true
+---
+
+# Job Application Tracker: rules for the AI
+
+Always read `PROJECT.md` first. Also consult `docs/DATA_MODEL.md` and `docs/API.md` before touching models or endpoints. Follow `docs/BUILD_PLAN.md` order unless told otherwise.
+
+## Stack
+- Frontend: React 18 + TypeScript, Vite, React Router, TanStack Query, Tailwind CSS, react-hook-form + zod.
+- Backend: Python 3.12, FastAPI, Pydantic v2, SQLAlchemy 2.0 (typed style), Alembic.
+- Database: PostgreSQL 16. Never use SQLite.
+- Scraping: httpx + BeautifulSoup4. Auth: JWT in httpOnly cookie, argon2.
+
+## Working style
+- Make small, focused changes. Touch only files needed for the task. Never rewrite unrelated code.
+- Before large changes, briefly state the plan, then implement.
+- Do not add a new dependency without explaining why and asking first.
+- After changes, tell me exactly how to run and verify them (commands and what I should see).
+- If a requirement is unclear, ask one concise question instead of guessing.
+- Do not delete files or run destructive commands (drop tables, `rm -rf`, force push) without asking.
+
+## Backend rules
+- Type hints on all functions. Use Pydantic schemas for all request and response bodies; never return ORM models directly.
+- Keep routers thin. Put logic in `app/services/`.
+- Use dependency injection (`Depends`) for the DB session and current user.
+- Every query on user data must filter by `user_id`. Return 404, not 403, for records the user does not own.
+- Any schema change needs an Alembic migration (autogenerate, then review it) and an update to `docs/DATA_MODEL.md`.
+- Any endpoint change must update `docs/API.md`.
+- Add pytest tests for every new endpoint and for the scraper (use saved HTML fixtures, no live network calls in tests).
+- Use Ruff for lint and formatting.
+
+## Frontend rules
+- Function components and hooks only. No `any`; type API responses.
+- Server state via TanStack Query. Local UI state via `useState`. No global state library unless asked.
+- Forms use react-hook-form + zod. Show field-level errors.
+- Every list and form needs loading, empty, and error states.
+- Keep API calls in `src/api/`. Components never call `fetch` directly.
+- Use Tailwind utility classes; keep a consistent spacing and colour scale. Clean, minimal, accessible (labels, focus states, keyboard support).
+- Shared status list and labels live in `src/lib/constants.ts`.
+
+## Security rules (non-negotiable)
+- Never store tokens in localStorage or sessionStorage. Use the httpOnly cookie.
+- Never log passwords, tokens, or uploaded document contents.
+- Never hardcode secrets. Read from environment variables; keep `.env.example` updated.
+- Scraper must: allow only http/https, block private/loopback/link-local IPs (including after redirects), enforce timeout and max size, and never try to bypass logins, CAPTCHAs, or bot protection.
+- Uploads: validate extension, MIME type, and magic bytes; max 5 MB; store under a random UUID key; never use the client filename in a file path.
+
+## Git
+- Suggest a clear commit message after each working step.
+- Never commit `.env`, `uploads/`, `.venv/`, or `node_modules/`.
