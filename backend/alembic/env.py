@@ -10,9 +10,12 @@ from sqlalchemy import engine_from_config, pool
 
 from app.config import get_settings
 from app.db import Base
-
-# Import models here once they exist so autogenerate can detect them:
-# from app.models import ...  # noqa: F401
+from app.models import (  # noqa: F401
+    Application,
+    Document,
+    StatusHistory,
+    User,
+)
 
 config = context.config
 
