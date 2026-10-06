@@ -268,6 +268,9 @@ export function ApplicationsPage() {
                     <th className="px-4 py-3">Resume</th>
                     <th className="px-4 py-3">Cover letter</th>
                     <th className="px-4 py-3">Source</th>
+                    <th className="px-4 py-3">
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -300,6 +303,14 @@ export function ApplicationsPage() {
                       </td>
                       <td className="px-4 py-3 text-slate-700">
                         {app.source_domain ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link
+                          to={`/applications/${app.id}`}
+                          className="whitespace-nowrap text-sm font-medium text-teal-700 hover:underline"
+                        >
+                          View details
+                        </Link>
                       </td>
                     </tr>
                   ))}
@@ -351,6 +362,12 @@ export function ApplicationsPage() {
                       <dd>{app.cover_letter?.label ?? "—"}</dd>
                     </div>
                   </dl>
+                  <Link
+                    to={`/applications/${app.id}`}
+                    className="mt-3 inline-block text-sm font-medium text-teal-700 hover:underline"
+                  >
+                    View details
+                  </Link>
                 </li>
               ))}
             </ul>
