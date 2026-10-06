@@ -52,9 +52,11 @@ def test_parse_jsonld_fixture() -> None:
     assert job.company == "Example Pty Ltd"
     assert job.location is not None
     assert "Melbourne" in job.location
-    assert job.employment_type == "FULL_TIME"
+    assert job.employment_type == "Full-time"
     assert job.salary_text is not None
-    assert "140000" in job.salary_text
+    assert "140,000" in job.salary_text
+    assert "160,000" in job.salary_text
+    assert "per year" in job.salary_text
     assert job.description is not None
     assert "Build APIs" in job.description
     assert "Python" in job.description
@@ -64,6 +66,18 @@ def test_parse_jsonld_fixture() -> None:
     assert job.work_type == WorkType.remote
     assert job.scrape_status == ScrapeStatus.success
     assert job.message is None
+
+
+def test_parse_jsonld_uri_type_and_variant_shapes() -> None:
+    html = (FIXTURES / "job_jsonld_variants.html").read_text(encoding="utf-8")
+    job = parse_job_html(html, "https://jobs.example.com/roles/42")
+
+    assert job.title == "Platform Engineer"
+    assert job.company == "Northwind Analytics"
+    assert job.location == "Sydney, NSW, Australia"
+    assert job.employment_type == "Full-time, Contract"
+    assert job.salary_text == "A$145,000"
+    assert job.scrape_status == ScrapeStatus.success
 
 
 def test_parse_opengraph_fixture() -> None:

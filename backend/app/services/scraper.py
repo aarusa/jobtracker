@@ -214,6 +214,12 @@ def _parse_date(value: Any) -> date | None:
 def _map_work_type(value: Any) -> WorkType | None:
     if value is None:
         return None
+    if isinstance(value, list):
+        for item in value:
+            mapped = _map_work_type(item)
+            if mapped:
+                return mapped
+        return None
     text = str(value).strip().lower()
     if not text:
         return None
@@ -226,56 +232,226 @@ def _map_work_type(value: Any) -> WorkType | None:
     return None
 
 
+def _schema_type_name(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if "/" in text:
+        text = text.rsplit("/", 1)[-1]
+    if ":" in text:
+        text = text.rsplit(":", 1)[-1]
+    return text
+
+
+def _schema_text(value: Any) -> str | None:
+    """Coerce schema.org string-or-object values to plain text."""
+    if value is None:
+        return None
+    if isinstance(value, list):
+        parts = [_schema_text(item) for item in value]
+        joined = ", ".join(part for part in parts if part)
+        return joined or None
+    if isinstance(value, dict):
+        for key in ("name", "@value", "value", "text"):
+            nested = _schema_text(value.get(key))
+            if nested:
+                return nested
+        return None
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if isinstance(value, float) and value.is_integer():
+            return str(int(value))
+        return str(value)
+    text = str(value).strip()
+    return text or None
+
+
+def _format_employment_type(value: Any) -> str | None:
+    text = _schema_text(value)
+    if not text:
+        return None
+    labels = {
+        "full_time": "Full-time",
+        "full-time": "Full-time",
+        "fulltime": "Full-time",
+        "part_time": "Part-time",
+        "part-time": "Part-time",
+        "parttime": "Part-time",
+        "contractor": "Contract",
+        "contract": "Contract",
+        "temporary": "Temporary",
+        "intern": "Internship",
+        "internship": "Internship",
+        "volunteer": "Volunteer",
+        "per_diem": "Per diem",
+        "other": "Other",
+    }
+    parts: list[str] = []
+    for raw in re.split(r"\s*,\s*", text):
+        key = raw.strip().lower().replace(" ", "_")
+        parts.append(labels.get(key, raw.strip().replace("_", " ").title()))
+    # Preserve order, drop duplicates.
+    seen: set[str] = set()
+    unique: list[str] = []
+    for part in parts:
+        if part and part not in seen:
+            seen.add(part)
+            unique.append(part)
+    return ", ".join(unique) if unique else None
+
+
+def _company_from_jsonld(node: dict[str, Any]) -> str | None:
+    org = node.get("hiringOrganization") or node.get("hiringOrganisation")
+    if isinstance(org, list) and org:
+        org = org[0]
+    if isinstance(org, dict):
+        return _schema_text(org.get("name") or org)
+    return _schema_text(org)
+
+
+def _address_parts(address: dict[str, Any]) -> list[str]:
+    parts: list[str] = []
+    for key in (
+        "streetAddress",
+        "addressLocality",
+        "addressRegion",
+        "postalCode",
+        "addressCountry",
+    ):
+        text = _schema_text(address.get(key))
+        if text:
+            parts.append(text)
+    return parts
+
+
+def _format_single_location(loc: Any) -> str | None:
+    if isinstance(loc, str):
+        return loc.strip() or None
+    if not isinstance(loc, dict):
+        return _schema_text(loc)
+    address = loc.get("address")
+    if isinstance(address, str) and address.strip():
+        return address.strip()
+    if isinstance(address, dict):
+        parts = _address_parts(address)
+        if parts:
+            return ", ".join(parts)
+    return _schema_text(loc.get("name") or loc)
+
+
 def _job_location_from_jsonld(node: dict[str, Any]) -> str | None:
     loc = node.get("jobLocation") or node.get("location")
-    if isinstance(loc, list) and loc:
-        loc = loc[0]
-    if isinstance(loc, str):
-        return loc
-    if not isinstance(loc, dict):
+    if isinstance(loc, list):
+        parts = [_format_single_location(item) for item in loc]
+        joined = "; ".join(part for part in parts if part)
+        if joined:
+            return joined
+    else:
+        formatted = _format_single_location(loc)
+        if formatted:
+            return formatted
+
+    # Remote / applicant-location fallbacks used by Google job posting markup.
+    requirements = node.get("applicantLocationRequirements")
+    if isinstance(requirements, list):
+        names = [_schema_text(item) for item in requirements]
+        joined = ", ".join(name for name in names if name)
+        if joined:
+            return joined
+    req_text = _schema_text(requirements)
+    if req_text:
+        return req_text
+    return None
+
+
+_CURRENCY_SYMBOLS = {
+    "AUD": "A$",
+    "USD": "$",
+    "GBP": "£",
+    "EUR": "€",
+    "NZD": "NZ$",
+    "CAD": "C$",
+    "SGD": "S$",
+    "INR": "₹",
+}
+
+
+def _format_money_amount(amount: Any, currency: str | None) -> str | None:
+    if amount is None or isinstance(amount, bool):
         return None
-    address = loc.get("address")
-    if isinstance(address, str):
-        return address
-    if isinstance(address, dict):
-        parts = [
-            address.get("streetAddress"),
-            address.get("addressLocality"),
-            address.get("addressRegion"),
-            address.get("postalCode"),
-            address.get("addressCountry"),
-        ]
-        return ", ".join(str(p) for p in parts if p)
-    name = loc.get("name")
-    return str(name) if name else None
+    try:
+        number = float(amount)
+    except (TypeError, ValueError):
+        text = _schema_text(amount)
+        if not text:
+            return None
+        symbol = _CURRENCY_SYMBOLS.get((currency or "").upper(), currency or "")
+        return f"{symbol}{text}".strip() if symbol else text
+
+    if number.is_integer():
+        formatted = f"{int(number):,}"
+    else:
+        formatted = f"{number:,.2f}"
+    symbol = _CURRENCY_SYMBOLS.get((currency or "").upper(), currency or "")
+    if symbol:
+        return f"{symbol}{formatted}"
+    return formatted
+
+
+def _unit_label(unit: Any) -> str | None:
+    text = _schema_text(unit)
+    if not text:
+        return None
+    labels = {
+        "HOUR": "per hour",
+        "DAY": "per day",
+        "WEEK": "per week",
+        "MONTH": "per month",
+        "YEAR": "per year",
+    }
+    return labels.get(text.upper(), text.lower())
 
 
 def _salary_from_jsonld(node: dict[str, Any]) -> str | None:
     salary = node.get("baseSalary") or node.get("estimatedSalary")
+    currency = _schema_text(node.get("salaryCurrency"))
+
+    if isinstance(salary, (int, float)) and not isinstance(salary, bool):
+        amount = _format_money_amount(salary, currency)
+        return amount
+
     if isinstance(salary, str):
-        return salary
+        amount = _format_money_amount(salary, currency) if currency else salary.strip()
+        return amount or None
+
     if not isinstance(salary, dict):
         return None
+
+    currency = _schema_text(salary.get("currency")) or currency
     value = salary.get("value")
-    currency = salary.get("currency") or ""
+    unit = salary.get("unitText")
+
     if isinstance(value, dict):
         minimum = value.get("minValue")
         maximum = value.get("maxValue")
-        unit = value.get("unitText") or salary.get("unitText")
-        if minimum and maximum:
-            text = f"{currency}{minimum} - {currency}{maximum}".strip()
-        elif minimum:
-            text = f"{currency}{minimum}".strip()
-        elif maximum:
-            text = f"{currency}{maximum}".strip()
+        single = value.get("value")
+        unit = value.get("unitText") or unit
+        if minimum is not None and maximum is not None:
+            low = _format_money_amount(minimum, currency)
+            high = _format_money_amount(maximum, currency)
+            text = f"{low} - {high}" if low and high else (low or high)
+        elif minimum is not None:
+            text = _format_money_amount(minimum, currency)
+        elif maximum is not None:
+            text = _format_money_amount(maximum, currency)
         else:
-            text = str(value.get("value") or "").strip()
-        if unit:
-            text = f"{text} {unit}".strip()
-        return text or None
-    if value is not None:
-        return f"{currency}{value}".strip()
-    return None
+            text = _format_money_amount(single, currency)
+    else:
+        text = _format_money_amount(value, currency)
+
+    if not text:
+        return None
+    unit_text = _unit_label(unit)
+    if unit_text:
+        return f"{text} {unit_text}"
+    return text
 
 
 def _iter_jsonld_nodes(payload: Any) -> list[dict[str, Any]]:
@@ -298,9 +474,8 @@ def _iter_jsonld_nodes(payload: Any) -> list[dict[str, Any]]:
 
 def _is_job_posting(node: dict[str, Any]) -> bool:
     type_value = node.get("@type")
-    if isinstance(type_value, list):
-        return any(str(t).lower() == "jobposting" for t in type_value)
-    return str(type_value or "").lower() == "jobposting"
+    values = type_value if isinstance(type_value, list) else [type_value]
+    return any(_schema_type_name(t) == "jobposting" for t in values)
 
 
 def _apply_jsonld(job: ScrapedJob, soup: BeautifulSoup) -> None:
@@ -315,14 +490,10 @@ def _apply_jsonld(job: ScrapedJob, soup: BeautifulSoup) -> None:
         for node in _iter_jsonld_nodes(payload):
             if not _is_job_posting(node):
                 continue
-            _set_if_empty(job, "title", node.get("title") or node.get("name"))
-            org = node.get("hiringOrganization")
-            if isinstance(org, dict):
-                _set_if_empty(job, "company", org.get("name"))
-            elif isinstance(org, str):
-                _set_if_empty(job, "company", org)
+            _set_if_empty(job, "title", _schema_text(node.get("title") or node.get("name")))
+            _set_if_empty(job, "company", _company_from_jsonld(node))
             _set_if_empty(job, "location", _job_location_from_jsonld(node))
-            _set_if_empty(job, "employment_type", node.get("employmentType"))
+            _set_if_empty(job, "employment_type", _format_employment_type(node.get("employmentType")))
             _set_if_empty(job, "salary_text", _salary_from_jsonld(node))
             description = node.get("description")
             if isinstance(description, str):
@@ -351,6 +522,29 @@ def _meta_content(soup: BeautifulSoup, *keys: str) -> str | None:
 def _apply_opengraph(job: ScrapedJob, soup: BeautifulSoup) -> None:
     _set_if_empty(job, "title", _meta_content(soup, "og:title", "twitter:title"))
     _set_if_empty(job, "company", _meta_content(soup, "og:site_name"))
+    _set_if_empty(
+        job,
+        "location",
+        _meta_content(
+            soup,
+            "og:locality",
+            "geo.placename",
+            "job:location",
+            "twitter:data1",
+        ),
+    )
+    _set_if_empty(
+        job,
+        "employment_type",
+        _format_employment_type(
+            _meta_content(soup, "job:employment_type", "employmentType")
+        ),
+    )
+    _set_if_empty(
+        job,
+        "salary_text",
+        _meta_content(soup, "job:salary", "salary", "twitter:data2"),
+    )
     description = _meta_content(soup, "og:description", "description", "twitter:description")
     if description:
         _set_if_empty(job, "description", _normalize_whitespace(description))
@@ -368,6 +562,7 @@ def _apply_heuristics(job: ScrapedJob, soup: BeautifulSoup) -> None:
                 break
 
     for selector in (
+        "[itemprop='hiringOrganization']",
         "[class*='company']",
         "[data-company]",
         "[class*='employer']",
@@ -375,9 +570,59 @@ def _apply_heuristics(job: ScrapedJob, soup: BeautifulSoup) -> None:
     ):
         node = soup.select_one(selector)
         if node:
-            text = node.get("data-company") if isinstance(node, Tag) else None
+            text = None
+            if isinstance(node, Tag):
+                text = node.get("data-company") or node.get("content")
             _set_if_empty(job, "company", text or node.get_text(" ", strip=True))
             if job.company:
+                break
+
+    for selector in (
+        "[itemprop='jobLocation']",
+        "[itemprop='address']",
+        "[class*='location']",
+        "[data-location]",
+    ):
+        node = soup.select_one(selector)
+        if node:
+            text = None
+            if isinstance(node, Tag):
+                text = node.get("data-location") or node.get("content")
+            _set_if_empty(job, "location", text or node.get_text(" ", strip=True))
+            if job.location:
+                break
+
+    for selector in (
+        "[itemprop='employmentType']",
+        "[class*='employment']",
+        "[data-employment-type]",
+    ):
+        node = soup.select_one(selector)
+        if node:
+            text = None
+            if isinstance(node, Tag):
+                text = node.get("content") or node.get("data-employment-type")
+            _set_if_empty(
+                job,
+                "employment_type",
+                _format_employment_type(text or node.get_text(" ", strip=True)),
+            )
+            if job.employment_type:
+                break
+
+    for selector in (
+        "[itemprop='baseSalary']",
+        "[class*='salary']",
+        "[data-salary]",
+        "[class*='compensation']",
+    ):
+        node = soup.select_one(selector)
+        if node:
+            text = None
+            if isinstance(node, Tag):
+                text = node.get("content") or node.get("data-salary")
+            _set_if_empty(job, "salary_text", text or node.get_text(" ", strip=True))
+            if job.salary_text:
                 break
 
     for selector in (
