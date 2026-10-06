@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://jobtracker:jobtracker@localhost:5432/jobtracker"
     secret_key: str = "change-me-to-a-long-random-string"
     access_token_expire_minutes: int = 60
+    remember_me_expire_days: int = 30
+    # When true, forgot-password responses may include a one-time reset URL for local testing
+    # (no email provider configured yet). Keep false in production.
+    expose_dev_reset_link: bool = False
+    frontend_base_url: str = "http://localhost:5173"
     cookie_secure: bool = False
     cors_origins: str = "http://localhost:5173"
     upload_dir: str = "./uploads"

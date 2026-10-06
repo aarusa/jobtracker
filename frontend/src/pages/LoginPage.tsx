@@ -23,7 +23,7 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: "", password: "", remember_me: false },
   });
 
   if (isLoading) {
@@ -35,18 +35,24 @@ export function LoginPage() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/applications" replace />;
   }
 
   const from =
     (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ??
-    "/";
+    "/applications";
 
   async function onSubmit(values: LoginFormValues) {
     setFormError(null);
     try {
-      await loginMutation.mutateAsync(values);
-      navigate(from, { replace: true });
+      await loginMutation.mutateAsync({
+        email: values.email,
+        password: values.password,
+        remember_me: Boolean(values.remember_me),
+      });
+      navigate(from.startsWith("/login") ? "/applications" : from, {
+        replace: true,
+      });
     } catch (error) {
       if (error instanceof ApiError) {
         setFormError(error.detail);
@@ -59,9 +65,12 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        <p className="text-sm font-medium uppercase tracking-wide text-slate-500">
+        <Link
+          to="/"
+          className="text-sm font-medium uppercase tracking-wide text-slate-500 hover:text-slate-700"
+        >
           Job Application Tracker
-        </p>
+        </Link>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
           Log in
         </h1>
@@ -94,7 +103,7 @@ export function LoginPage() {
               id="email"
               type="email"
               autoComplete="email"
-              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
               {...register("email")}
             />
             {errors.email ? (
@@ -103,17 +112,25 @@ export function LoginPage() {
           </div>
 
           <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-slate-700"
-            >
-              Password
-            </label>
+            <div className="flex items-center justify-between gap-3">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-slate-700"
+              >
+                Password
+              </label>
+              <Link
+                to="/forgot-password"
+                className="text-sm font-medium text-teal-700 hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <input
               id="password"
               type="password"
               autoComplete="current-password"
-              className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm shadow-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
               {...register("password")}
             />
             {errors.password ? (
@@ -121,10 +138,19 @@ export function LoginPage() {
             ) : null}
           </div>
 
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-600"
+              {...register("remember_me")}
+            />
+            Remember me for 30 days
+          </label>
+
           <button
             type="submit"
             disabled={isSubmitting || loginMutation.isPending}
-            className="w-full rounded-md bg-teal-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:opacity-60"
+            className="h-10 w-full rounded-lg bg-teal-700 px-4 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:opacity-60"
           >
             {isSubmitting || loginMutation.isPending ? "Logging in…" : "Log in"}
           </button>

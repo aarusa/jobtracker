@@ -1,6 +1,12 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 
 import { useAuth, useLogout } from "../hooks/useAuth";
+import { toDisplayName } from "../lib/format";
+
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  isActive
+    ? "rounded-md px-2 py-1 font-medium text-teal-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+    : "rounded-md px-2 py-1 text-slate-600 hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600";
 
 export function AppLayout() {
   const { user } = useAuth();
@@ -10,40 +16,33 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-6">
-            <Link to="/" className="text-base font-semibold tracking-tight">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6">
+            <Link
+              to="/applications"
+              className="shrink-0 text-base font-semibold tracking-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+            >
               Job Tracker
             </Link>
-            <nav className="hidden items-center gap-4 text-sm sm:flex">
-              <NavLink
-                to="/"
-                end
-                className={({ isActive }) =>
-                  isActive
-                    ? "font-medium text-teal-700"
-                    : "text-slate-600 hover:text-slate-900"
-                }
-              >
+            <nav
+              aria-label="Main"
+              className="flex items-center gap-1 text-sm sm:gap-2"
+            >
+              <NavLink to="/applications" className={navLinkClass}>
                 Applications
               </NavLink>
-              <NavLink
-                to="/documents"
-                className={({ isActive }) =>
-                  isActive
-                    ? "font-medium text-teal-700"
-                    : "text-slate-600 hover:text-slate-900"
-                }
-              >
+              <NavLink to="/documents" className={navLinkClass}>
                 Documents
               </NavLink>
             </nav>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-slate-600 sm:inline">
-              {user?.name}
-            </span>
+            {user?.name ? (
+              <span className="max-w-[10rem] truncate text-sm text-slate-600 sm:max-w-none">
+                {toDisplayName(user.name)}
+              </span>
+            ) : null}
             <button
               type="button"
               onClick={() => {

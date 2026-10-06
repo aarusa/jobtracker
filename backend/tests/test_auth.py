@@ -103,3 +103,76 @@ def test_logout_clears_cookie(client: TestClient) -> None:
 
     client.cookies.clear()
     assert client.get("/api/auth/me").status_code == 401
+
+
+def test_register_title_cases_name(client: TestClient) -> None:
+    response = _register(client, email="cased@example.com", name="jane doe")
+    assert response.status_code == 201
+    assert response.json()["name"] == "Jane Doe"
+
+
+def test_login_remember_me_sets_longer_cookie(client: TestClient) -> None:
+    _register(client, email="remember@example.com", password="password123")
+    client.cookies.clear()
+    response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "remember@example.com",
+            "password": "password123",
+            "remember_me": True,
+        },
+    )
+    assert response.status_code == 200
+    set_cookie = response.headers.get("set-cookie", "").lower()
+    assert "max-age=" in set_cookie
+    # 30 days in seconds
+    assert "2592000" in set_cookie
+
+
+def test_forgot_and_reset_password_flow(
+    client: TestClient, monkeypatch: object
+) -> None:
+    from app.config import get_settings
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "expose_dev_reset_link", True)
+
+    _register(client, email="resetme@example.com", password="password123")
+    client.cookies.clear()
+
+    forgot = client.post(
+        "/api/auth/forgot-password",
+        json={"email": "resetme@example.com"},
+    )
+    assert forgot.status_code == 200
+    body = forgot.json()
+    assert "detail" in body
+    assert body["dev_reset_url"]
+    token = body["dev_reset_url"].split("token=")[-1]
+    assert token
+
+    unknown = client.post(
+        "/api/auth/forgot-password",
+        json={"email": "nobody@example.com"},
+    )
+    assert unknown.status_code == 200
+    assert unknown.json()["detail"] == body["detail"]
+    assert unknown.json().get("dev_reset_url") is None
+
+    reset = client.post(
+        "/api/auth/reset-password",
+        json={"token": token, "password": "newpassword99"},
+    )
+    assert reset.status_code == 204
+
+    bad_login = client.post(
+        "/api/auth/login",
+        json={"email": "resetme@example.com", "password": "password123"},
+    )
+    assert bad_login.status_code == 401
+
+    good_login = client.post(
+        "/api/auth/login",
+        json={"email": "resetme@example.com", "password": "newpassword99"},
+    )
+    assert good_login.status_code == 200

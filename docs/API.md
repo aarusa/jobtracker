@@ -4,7 +4,7 @@ Base path: `/api`. Format: JSON unless noted. Auth: httpOnly cookie named `acces
 
 ## Conventions
 
-- All endpoints except `POST /auth/register`, `POST /auth/login`, and `GET /health` require authentication. Unauthenticated requests return `401`.
+- All endpoints except `POST /auth/register`, `POST /auth/login`, `POST /auth/forgot-password`, `POST /auth/reset-password`, and `GET /health` require authentication. Unauthenticated requests return `401`.
 - Records belonging to other users return `404`.
 - Errors use this shape: `{ "detail": "Human readable message" }`. Validation errors (`422`) use FastAPI's default list format.
 - Dates are ISO 8601 (`2026-10-05`). Timestamps are UTC ISO 8601.
@@ -21,13 +21,19 @@ Base path: `/api`. Format: JSON unless noted. Auth: httpOnly cookie named `acces
 | Method | Path | Body | Response |
 |---|---|---|---|
 | POST | `/auth/register` | `{ name, email, password }` | `201` user object; sets cookie |
-| POST | `/auth/login` | `{ email, password }` | `200` user object; sets cookie |
+| POST | `/auth/login` | `{ email, password, remember_me? }` | `200` user object; sets cookie |
+| POST | `/auth/forgot-password` | `{ email }` | `200` `{ detail, dev_reset_url? }` |
+| POST | `/auth/reset-password` | `{ token, password }` | `204` |
 | POST | `/auth/logout` | none | `204`; clears cookie |
 | GET | `/auth/me` | none | `200` current user object |
 
 User object: `{ id, name, email, created_at }`.
 
-Rules: password minimum 8 characters; email unique (case-insensitive); login and register are rate limited; login errors never reveal whether the email exists (`401 Invalid email or password`).
+Rules: password minimum 8 characters; email unique (case-insensitive); names are stored title-cased; login and register (and password-reset endpoints) are rate limited; login errors never reveal whether the email exists (`401 Invalid email or password`).
+
+- `remember_me` (default `false`): when `true`, the JWT and cookie last `REMEMBER_ME_EXPIRE_DAYS` (default 30 days) instead of `ACCESS_TOKEN_EXPIRE_MINUTES`.
+- `forgot-password` always returns the same generic `detail` whether or not the email exists. Reset tokens expire in 1 hour. There is no email provider yet; when `EXPOSE_DEV_RESET_LINK=true`, the response may include `dev_reset_url` for local testing only — keep that flag off in production.
+- `reset-password` accepts the one-time token from the reset link and the new password.
 
 ## Scrape
 
@@ -55,10 +61,10 @@ Scrape result:
 }
 ```
 
-- `scrape_status`: `success` (key fields found), `partial` (some fields), `failed` (nothing useful).
+- `scrape_status` on preview responses: `success` (key fields found), `partial` (some fields), `failed` (nothing useful). When saving an application without a scrape, the client may send `manual`.
 - `message`: friendly explanation when partial or failed (e.g. "This site blocks automated access. Please fill in the details manually.").
 - `existing_application_id`: set if the user already saved this normalised URL.
-- Errors: `400` invalid or blocked URL (non-http, private IP, etc.), `422` malformed body. A site being unreachable returns `200` with `scrape_status: "failed"` and a message, not a 5xx.
+- Errors: `400` for invalid, blocked, or unresolvable URLs (non-http, private IP, DNS failure, etc.), `422` malformed body. A resolvable site that cannot be fetched (timeout, connection error, empty parse) returns `200` with `scrape_status: "failed"` and a message, not a 5xx.
 
 ## Applications
 

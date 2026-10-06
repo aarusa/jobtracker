@@ -26,6 +26,24 @@ import {
   type ScrapeStatus,
   type WorkType,
 } from "../lib/constants";
+import {
+  alertErrorClass,
+  alertSuccessClass,
+  btnDangerClass,
+  btnPrimaryClass,
+  btnSecondaryClass,
+  dateInputClass,
+  fieldClass,
+  fieldGridClass,
+  focusRing,
+  inputClass,
+  labelClass,
+  sectionClass,
+  sectionSubtitleClass,
+  sectionTitleClass,
+  selectClass,
+  textareaClass,
+} from "../lib/formStyles";
 
 function emptyToNull(value: string | undefined): string | null {
   const trimmed = value?.trim() ?? "";
@@ -113,9 +131,7 @@ export function ApplicationDetailPage() {
       setStatusNote("");
     } catch (err) {
       if (err instanceof ApiError && err.existingApplicationId) {
-        setFormError(
-          `${err.detail} Open the existing application instead.`,
-        );
+        setFormError(`${err.detail} Open the existing application instead.`);
         return;
       }
       setFormError(
@@ -130,7 +146,7 @@ export function ApplicationDetailPage() {
     if (!id) return;
     try {
       await deleteMutation.mutateAsync(id);
-      navigate("/", { replace: true });
+      navigate("/applications", { replace: true });
     } catch (err) {
       setPendingDelete(false);
       setFormError(
@@ -141,16 +157,13 @@ export function ApplicationDetailPage() {
     }
   }
 
-  const inputClass =
-    "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20";
-
   if (isLoading) {
     return <p className="text-sm text-slate-600">Loading application…</p>;
   }
 
   if (isError || !data) {
     return (
-      <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div className={alertErrorClass}>
         <p>
           {error instanceof ApiError
             ? error.detail
@@ -160,11 +173,14 @@ export function ApplicationDetailPage() {
           <button
             type="button"
             onClick={() => void refetch()}
-            className="font-medium underline"
+            className={`font-medium underline ${focusRing} rounded-sm`}
           >
             Try again
           </button>
-          <Link to="/" className="font-medium underline">
+          <Link
+            to="/applications"
+            className={`font-medium underline ${focusRing} rounded-sm`}
+          >
             Back to list
           </Link>
         </div>
@@ -173,20 +189,25 @@ export function ApplicationDetailPage() {
   }
 
   return (
-    <div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <Link to="/" className="text-sm font-medium text-teal-700 hover:underline">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <Link
+            to="/applications"
+            className={`text-sm font-medium text-teal-700 hover:underline ${focusRing} rounded-sm`}
+          >
             ← Applications
           </Link>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
             {data.company || "Untitled company"}
           </h1>
           <p className="mt-1 text-slate-600">{data.title || "Untitled role"}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <StatusBadge status={data.status} />
             {data.source_domain ? (
-              <span className="text-xs text-slate-500">{data.source_domain}</span>
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                {data.source_domain}
+              </span>
             ) : null}
           </div>
         </div>
@@ -195,14 +216,14 @@ export function ApplicationDetailPage() {
             href={data.job_url}
             target="_blank"
             rel="noreferrer"
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className={btnSecondaryClass}
           >
             Open job posting
           </a>
           <button
             type="button"
             onClick={() => setPendingDelete(true)}
-            className="rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50"
+            className={btnDangerClass}
           >
             Delete
           </button>
@@ -210,59 +231,60 @@ export function ApplicationDetailPage() {
       </div>
 
       {formError ? (
-        <p
-          role="alert"
-          className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-        >
+        <p role="alert" className={alertErrorClass}>
           {formError}
         </p>
       ) : null}
       {saveMessage ? (
-        <p
-          role="status"
-          className="mt-4 rounded-md border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900"
-        >
+        <p role="status" className={alertSuccessClass}>
           {saveMessage}
         </p>
       ) : null}
 
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="mt-6 space-y-6"
+        className="space-y-5"
         noValidate
       >
-        <section className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
-          <h2 className="text-sm font-semibold text-slate-900">Details</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label htmlFor="job_url" className="block text-sm font-medium text-slate-700">
+        <section className={sectionClass}>
+          <h2 className={sectionTitleClass}>Role details</h2>
+          <p className={sectionSubtitleClass}>
+            Keep scraped fields accurate as the role evolves.
+          </p>
+          <div className={`mt-4 ${fieldGridClass}`}>
+            <div className={`${fieldClass} sm:col-span-2`}>
+              <label htmlFor="job_url" className={labelClass}>
                 Job URL
               </label>
               <input id="job_url" className={inputClass} {...register("job_url")} />
             </div>
-            <div>
-              <label htmlFor="title" className="block text-sm font-medium text-slate-700">
+            <div className={fieldClass}>
+              <label htmlFor="title" className={labelClass}>
                 Title
               </label>
               <input id="title" className={inputClass} {...register("title")} />
             </div>
-            <div>
-              <label htmlFor="company" className="block text-sm font-medium text-slate-700">
+            <div className={fieldClass}>
+              <label htmlFor="company" className={labelClass}>
                 Company
               </label>
               <input id="company" className={inputClass} {...register("company")} />
             </div>
-            <div>
-              <label htmlFor="location" className="block text-sm font-medium text-slate-700">
+            <div className={fieldClass}>
+              <label htmlFor="location" className={labelClass}>
                 Location
               </label>
               <input id="location" className={inputClass} {...register("location")} />
             </div>
-            <div>
-              <label htmlFor="work_type" className="block text-sm font-medium text-slate-700">
+            <div className={fieldClass}>
+              <label htmlFor="work_type" className={labelClass}>
                 Work type
               </label>
-              <select id="work_type" className={inputClass} {...register("work_type")}>
+              <select
+                id="work_type"
+                className={selectClass}
+                {...register("work_type")}
+              >
                 {WORK_TYPES.map((type) => (
                   <option key={type} value={type}>
                     {WORK_TYPE_LABELS[type]}
@@ -270,11 +292,8 @@ export function ApplicationDetailPage() {
                 ))}
               </select>
             </div>
-            <div>
-              <label
-                htmlFor="employment_type"
-                className="block text-sm font-medium text-slate-700"
-              >
+            <div className={fieldClass}>
+              <label htmlFor="employment_type" className={labelClass}>
                 Employment type
               </label>
               <input
@@ -283,39 +302,68 @@ export function ApplicationDetailPage() {
                 {...register("employment_type")}
               />
             </div>
-            <div>
-              <label htmlFor="salary_text" className="block text-sm font-medium text-slate-700">
+            <div className={fieldClass}>
+              <label htmlFor="salary_text" className={labelClass}>
                 Salary
               </label>
-              <input id="salary_text" className={inputClass} {...register("salary_text")} />
+              <input
+                id="salary_text"
+                className={inputClass}
+                {...register("salary_text")}
+              />
             </div>
-            <div>
-              <label htmlFor="date_posted" className="block text-sm font-medium text-slate-700">
+            <div className={fieldClass}>
+              <label htmlFor="date_posted" className={labelClass}>
                 Date posted
               </label>
               <input
                 id="date_posted"
                 type="date"
-                className={inputClass}
+                className={dateInputClass}
                 {...register("date_posted")}
               />
             </div>
-            <div>
-              <label htmlFor="applied_at" className="block text-sm font-medium text-slate-700">
+            <div className={fieldClass}>
+              <label htmlFor="applied_at" className={labelClass}>
                 Applied date
               </label>
               <input
                 id="applied_at"
                 type="date"
-                className={inputClass}
+                className={dateInputClass}
                 {...register("applied_at")}
               />
             </div>
-            <div>
-              <label htmlFor="resume_id" className="block text-sm font-medium text-slate-700">
+          </div>
+
+          <div className={`mt-4 ${fieldClass}`}>
+            <label htmlFor="description" className={labelClass}>
+              Description
+            </label>
+            <textarea
+              id="description"
+              rows={6}
+              className={textareaClass}
+              {...register("description")}
+            />
+          </div>
+        </section>
+
+        <section className={sectionClass}>
+          <h2 className={sectionTitleClass}>Documents & notes</h2>
+          <p className={sectionSubtitleClass}>
+            Track which materials you sent and any personal notes.
+          </p>
+          <div className={`mt-4 ${fieldGridClass}`}>
+            <div className={fieldClass}>
+              <label htmlFor="resume_id" className={labelClass}>
                 Resume
               </label>
-              <select id="resume_id" className={inputClass} {...register("resume_id")}>
+              <select
+                id="resume_id"
+                className={selectClass}
+                {...register("resume_id")}
+              >
                 <option value="">None</option>
                 {resumes.map((doc) => (
                   <option key={doc.id} value={doc.id}>
@@ -324,16 +372,13 @@ export function ApplicationDetailPage() {
                 ))}
               </select>
             </div>
-            <div>
-              <label
-                htmlFor="cover_letter_id"
-                className="block text-sm font-medium text-slate-700"
-              >
+            <div className={fieldClass}>
+              <label htmlFor="cover_letter_id" className={labelClass}>
                 Cover letter
               </label>
               <select
                 id="cover_letter_id"
-                className={inputClass}
+                className={selectClass}
                 {...register("cover_letter_id")}
               >
                 <option value="">None</option>
@@ -345,53 +390,42 @@ export function ApplicationDetailPage() {
               </select>
             </div>
           </div>
-
-          <div className="mt-4">
-            <label htmlFor="description" className="block text-sm font-medium text-slate-700">
-              Description
-            </label>
-            <textarea
-              id="description"
-              rows={6}
-              className={inputClass}
-              {...register("description")}
-            />
-          </div>
-
-          <div className="mt-4">
-            <label htmlFor="notes" className="block text-sm font-medium text-slate-700">
+          <div className={`mt-4 ${fieldClass}`}>
+            <label htmlFor="notes" className={labelClass}>
               Notes
             </label>
-            <textarea id="notes" rows={3} className={inputClass} {...register("notes")} />
+            <textarea
+              id="notes"
+              rows={3}
+              className={textareaClass}
+              {...register("notes")}
+            />
           </div>
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
-          <h2 className="text-sm font-semibold text-slate-900">Status</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="status" className="block text-sm font-medium text-slate-700">
+        <section className={sectionClass}>
+          <h2 className={sectionTitleClass}>Status</h2>
+          <p className={sectionSubtitleClass}>
+            Updating status records a history entry; add an optional note.
+          </p>
+          <div className={`mt-4 ${fieldGridClass}`}>
+            <div className={fieldClass}>
+              <label htmlFor="status" className={labelClass}>
                 Current status
               </label>
-              <div className="mt-1">
-                <StatusSelect
-                  id="status"
-                  value={currentStatus}
-                  onChange={(status) =>
-                    setValue("status", status, { shouldDirty: true })
-                  }
-                  className="w-full"
-                />
-              </div>
+              <StatusSelect
+                id="status"
+                value={currentStatus}
+                onChange={(status) =>
+                  setValue("status", status, { shouldDirty: true })
+                }
+              />
             </div>
-            <div>
-              <label
-                htmlFor="status_note"
-                className="block text-sm font-medium text-slate-700"
-              >
+            <div className={fieldClass}>
+              <label htmlFor="status_note" className={labelClass}>
                 Status note{" "}
                 <span className="font-normal text-slate-500">
-                  (saved when status changes)
+                  (when status changes)
                 </span>
               </label>
               <input
@@ -405,39 +439,47 @@ export function ApplicationDetailPage() {
           </div>
         </section>
 
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-end">
           {isDirty ? (
-            <span className="text-xs text-slate-500">Unsaved changes</span>
+            <span className="text-xs text-slate-500 sm:mr-auto">
+              Unsaved changes
+            </span>
           ) : null}
           <button
             type="submit"
             disabled={isSubmitting || updateMutation.isPending}
-            className="rounded-md bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-60"
+            className={btnPrimaryClass}
           >
             {updateMutation.isPending ? "Saving…" : "Save changes"}
           </button>
         </div>
       </form>
 
-      <section className="mt-8 rounded-lg border border-slate-200 bg-white p-4 sm:p-5">
-        <h2 className="text-sm font-semibold text-slate-900">Status history</h2>
+      <section className={sectionClass}>
+        <h2 className={sectionTitleClass}>Status history</h2>
+        <p className={sectionSubtitleClass}>
+          Every status change is kept here for reference.
+        </p>
         {(data.status_history?.length ?? 0) === 0 ? (
-          <p className="mt-3 text-sm text-slate-600">No history yet.</p>
+          <p className="mt-4 text-sm text-slate-600">No history yet.</p>
         ) : (
-          <ol className="mt-4 space-y-4">
+          <ol className="mt-5 space-y-0 border-l border-slate-200">
             {data.status_history!.map((item, index) => (
-              <li key={`${item.changed_at}-${index}`} className="relative pl-4">
-                <span className="absolute left-0 top-1.5 h-2 w-2 rounded-full bg-teal-600" />
+              <li
+                key={`${item.changed_at}-${index}`}
+                className="relative pb-5 pl-5 last:pb-0"
+              >
+                <span className="absolute -left-[5px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-teal-600 shadow-sm" />
                 <p className="text-sm font-medium text-slate-900">
                   {item.from_status
                     ? `${STATUS_LABELS[item.from_status]} → ${STATUS_LABELS[item.to_status]}`
                     : STATUS_LABELS[item.to_status]}
                 </p>
-                <p className="text-xs text-slate-500">
+                <p className="mt-0.5 text-xs text-slate-500">
                   {formatDisplayDate(item.changed_at)}
                 </p>
                 {item.note ? (
-                  <p className="mt-1 text-sm text-slate-600">{item.note}</p>
+                  <p className="mt-1.5 text-sm text-slate-600">{item.note}</p>
                 ) : null}
               </li>
             ))}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import socket
 from pathlib import Path
 
 import httpx
@@ -103,6 +104,13 @@ def test_parse_empty_fixture_fails() -> None:
 def test_fetch_rechecks_redirect_target(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
 
+    def fake_getaddrinfo(host: str, port: int, *args: object, **kwargs: object):
+        if host in {"127.0.0.1", "localhost"} or str(host).startswith("127."):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 0))]
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))]
+
+    monkeypatch.setattr("app.services.scraper.socket.getaddrinfo", fake_getaddrinfo)
+
     class FakeResponse:
         def __init__(self, status_code: int, location: str | None = None) -> None:
             self.status_code = status_code
@@ -147,6 +155,13 @@ def test_fetch_rechecks_redirect_target(monkeypatch: pytest.MonkeyPatch) -> None
 def test_scrape_job_url_network_error_returns_failed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(
+        "app.services.scraper.socket.getaddrinfo",
+        lambda *args, **kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))
+        ],
+    )
+
     def boom(*args: object, **kwargs: object) -> str:
         raise httpx.ConnectError("nope")
 

@@ -143,7 +143,7 @@ export function DocumentsPage() {
       </div>
 
       <div className="mt-6 border-b border-slate-200">
-        <nav className="-mb-px flex gap-6" aria-label="Document kinds">
+        <nav className="-mb-px flex gap-6" aria-label="Document kinds" role="tablist">
           {(
             [
               ["resume", "Resumes"],
@@ -153,6 +153,8 @@ export function DocumentsPage() {
             <button
               key={value}
               type="button"
+              role="tab"
+              aria-selected={tab === value}
               onClick={() => {
                 setTab(value);
                 setUploadError(null);
@@ -161,8 +163,8 @@ export function DocumentsPage() {
               }}
               className={
                 tab === value
-                  ? "border-b-2 border-teal-700 pb-2 text-sm font-medium text-teal-800"
-                  : "border-b-2 border-transparent pb-2 text-sm font-medium text-slate-500 hover:text-slate-800"
+                  ? "border-b-2 border-teal-700 pb-2 text-sm font-medium text-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+                  : "border-b-2 border-transparent pb-2 text-sm font-medium text-slate-500 hover:text-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
               }
             >
               {labelText}

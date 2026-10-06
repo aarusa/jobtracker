@@ -17,6 +17,7 @@ import {
   type ApplicationStatus,
 } from "../lib/constants";
 import { StatusSelect } from "../components/StatusSelect";
+import { controlBaseClass, focusRing } from "../lib/formStyles";
 
 export function ApplicationsPage() {
   const [q, setQ] = useState("");
@@ -140,10 +141,10 @@ export function ApplicationsPage() {
               value={q}
               onChange={(event) => setQ(event.target.value)}
               placeholder="Company or title"
-              className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+              className={`mt-1.5 ${controlBaseClass}`}
             />
           </div>
-          <div>
+          <div className="w-full sm:w-64">
             <label htmlFor="sort" className="block text-sm font-medium text-slate-700">
               Sort
             </label>
@@ -151,7 +152,7 @@ export function ApplicationsPage() {
               id="sort"
               value={sort}
               onChange={(event) => setSort(event.target.value)}
-              className="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20"
+              className={`mt-1.5 ${controlBaseClass}`}
             >
               {SORT_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -162,26 +163,33 @@ export function ApplicationsPage() {
           </div>
           <button
             type="submit"
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className={`mt-1.5 inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 ${focusRing}`}
           >
             Search
           </button>
         </form>
 
         <div>
-          <p className="text-sm font-medium text-slate-700">Filter by status</p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <p className="text-sm font-medium text-slate-700" id="status-filter-label">
+            Filter by status
+          </p>
+          <div
+            className="mt-2 flex flex-wrap gap-2"
+            role="group"
+            aria-labelledby="status-filter-label"
+          >
             {APPLICATION_STATUSES.map((status) => {
               const active = statusFilter.includes(status);
               return (
                 <button
                   key={status}
                   type="button"
+                  aria-pressed={active}
                   onClick={() => toggleStatus(status)}
                   className={
                     active
-                      ? "rounded-md bg-teal-700 px-2.5 py-1 text-xs font-medium text-white"
-                      : "rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                      ? "rounded-md bg-teal-700 px-2.5 py-1 text-xs font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                      : "rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
                   }
                 >
                   {STATUS_LABELS[status]}
@@ -192,7 +200,7 @@ export function ApplicationsPage() {
               <button
                 type="button"
                 onClick={() => setStatusFilter([])}
-                className="text-xs font-medium text-slate-500 underline"
+                className="text-xs font-medium text-slate-500 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
               >
                 Clear
               </button>
@@ -243,16 +251,37 @@ export function ApplicationsPage() {
 
         {!isLoading && !isError && items.length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-10 text-center">
-            <p className="text-sm text-slate-600">
-              No applications yet. Add one from a job URL to get started.
-            </p>
-            <button
-              type="button"
-              onClick={() => setAddOpen(true)}
-              className="mt-3 text-sm font-medium text-teal-700 hover:underline"
-            >
-              Add application
-            </button>
+            {search || statusFilter.length > 0 ? (
+              <>
+                <p className="text-sm text-slate-600">
+                  No applications match your search or filters.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQ("");
+                    setSearch("");
+                    setStatusFilter([]);
+                  }}
+                  className="mt-3 text-sm font-medium text-teal-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+                >
+                  Clear filters
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-slate-600">
+                  No applications yet. Add one from a job URL to get started.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setAddOpen(true)}
+                  className="mt-3 text-sm font-medium text-teal-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+                >
+                  Add application
+                </button>
+              </>
+            )}
           </div>
         ) : null}
 
@@ -286,7 +315,11 @@ export function ApplicationsPage() {
                         <p className="text-slate-600">{app.title || "Untitled role"}</p>
                       </td>
                       <td className="px-4 py-3">
+                        <label className="sr-only" htmlFor={`status-desktop-${app.id}`}>
+                          Status for {app.company || app.title || "application"}
+                        </label>
                         <StatusSelect
+                          id={`status-desktop-${app.id}`}
                           value={app.status}
                           disabled={updateMutation.isPending}
                           onChange={(status) => void handleStatusChange(app, status)}

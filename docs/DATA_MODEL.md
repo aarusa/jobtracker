@@ -81,7 +81,9 @@ erDiagram
 | id | uuid | PK, default `gen_random_uuid()` |
 | email | text | unique, stored lowercased, not null |
 | password_hash | text | argon2 hash, not null |
-| name | text | not null |
+| name | text | not null; stored title-cased |
+| password_reset_token_hash | text | SHA-256 of one-time reset token; nullable |
+| password_reset_expires_at | timestamptz | reset token expiry; nullable |
 | created_at | timestamptz | default now() |
 
 ### documents

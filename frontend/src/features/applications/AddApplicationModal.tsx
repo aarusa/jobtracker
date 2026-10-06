@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -22,6 +22,26 @@ import {
   type ScrapeStatus,
   type WorkType,
 } from "../../lib/constants";
+import {
+  alertErrorClass,
+  alertWarnClass,
+  btnNeutralClass,
+  btnPrimaryClass,
+  btnSecondaryClass,
+  fieldClass,
+  fieldErrorClass,
+  dateInputClass,
+  fieldGridClass,
+  focusRing,
+  inputClass,
+  labelClass,
+  linkQuietClass,
+  sectionClass,
+  sectionSubtitleClass,
+  sectionTitleClass,
+  selectClass,
+  textareaClass,
+} from "../../lib/formStyles";
 
 type AddApplicationModalProps = {
   open: boolean;
@@ -53,6 +73,7 @@ function emptyToNull(value: string | undefined): string | null {
 export function AddApplicationModal({ open, onClose }: AddApplicationModalProps) {
   const titleId = useId();
   const navigate = useNavigate();
+  const urlInputRef = useRef<HTMLInputElement>(null);
   const scrapeMutation = useScrapePreview();
   const createMutation = useCreateApplication();
   const { data: documents = [] } = useDocuments();
@@ -81,6 +102,7 @@ export function AddApplicationModal({ open, onClose }: AddApplicationModalProps)
     setScrapeMessage(null);
     setExistingId(null);
     setFormError(null);
+    requestAnimationFrame(() => urlInputRef.current?.focus());
   }, [open, reset]);
 
   useEffect(() => {
@@ -173,12 +195,9 @@ export function AddApplicationModal({ open, onClose }: AddApplicationModalProps)
 
   if (!open) return null;
 
-  const inputClass =
-    "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20";
-
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/50 px-3 py-6 sm:px-6"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/45 px-3 py-6 backdrop-blur-[2px] sm:px-6"
       role="presentation"
       onClick={onClose}
     >
@@ -186,74 +205,71 @@ export function AddApplicationModal({ open, onClose }: AddApplicationModalProps)
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="my-4 w-full max-w-2xl rounded-lg border border-slate-200 bg-white shadow-xl"
+        className="my-2 w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-2xl shadow-slate-900/15"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
-          <div>
-            <h2 id={titleId} className="text-lg font-semibold text-slate-900">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-6">
+          <div className="min-w-0">
+            <h2
+              id={titleId}
+              className="text-lg font-semibold tracking-tight text-slate-900"
+            >
               Add application
             </h2>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-slate-500">
               Paste a job URL to fetch details, then review and save.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
+          <button type="button" onClick={onClose} className={btnSecondaryClass}>
             Close
           </button>
         </div>
 
-        <div className="space-y-5 px-5 py-5">
-          <form onSubmit={handleFetchDetails} className="space-y-3">
-            <div>
-              <label
-                htmlFor="fetch-url"
-                className="block text-sm font-medium text-slate-700"
-              >
-                Job URL
-              </label>
-              <div className="mt-1 flex flex-col gap-2 sm:flex-row">
-                <input
-                  id="fetch-url"
-                  type="url"
-                  value={urlDraft}
-                  onChange={(event) => setUrlDraft(event.target.value)}
-                  placeholder="https://..."
-                  className={inputClass + " mt-0"}
-                />
-                <button
-                  type="submit"
-                  disabled={scrapeMutation.isPending}
-                  className="shrink-0 rounded-md bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-60"
-                >
-                  {scrapeMutation.isPending ? "Fetching…" : "Fetch details"}
-                </button>
+        <div className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
+          <section className={sectionClass}>
+            <h3 className={sectionTitleClass}>Fetch from URL</h3>
+            <p className={sectionSubtitleClass}>
+              We’ll try to prefill title, company, location, and more.
+            </p>
+            <form onSubmit={handleFetchDetails} className="mt-4">
+              <div className={fieldClass}>
+                <label htmlFor="fetch-url" className={labelClass}>
+                  Job URL
+                </label>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
+                  <input
+                    ref={urlInputRef}
+                    id="fetch-url"
+                    type="url"
+                    value={urlDraft}
+                    onChange={(event) => setUrlDraft(event.target.value)}
+                    placeholder="https://..."
+                    className={`${inputClass} sm:flex-1`}
+                  />
+                  <button
+                    type="submit"
+                    disabled={scrapeMutation.isPending}
+                    className={`${btnNeutralClass} sm:shrink-0`}
+                  >
+                    {scrapeMutation.isPending ? "Fetching…" : "Fetch details"}
+                  </button>
+                </div>
               </div>
-            </div>
-          </form>
+            </form>
+          </section>
 
           {scrapeMessage ? (
-            <p
-              role="status"
-              className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
-            >
+            <p role="status" className={alertWarnClass}>
               {scrapeMessage}
             </p>
           ) : null}
 
           {existingId ? (
-            <p
-              role="alert"
-              className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
-            >
+            <p role="alert" className={alertWarnClass}>
               You already saved this job.{" "}
               <Link
                 to={`/applications/${existingId}`}
-                className="font-medium underline"
+                className={`font-medium underline ${focusRing} rounded-sm`}
                 onClick={onClose}
               >
                 Open existing application
@@ -262,202 +278,214 @@ export function AddApplicationModal({ open, onClose }: AddApplicationModalProps)
           ) : null}
 
           {formError ? (
-            <p
-              role="alert"
-              className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
-            >
+            <p role="alert" className={alertErrorClass}>
               {formError}
             </p>
           ) : null}
 
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="space-y-4"
+            className="space-y-5"
             noValidate
           >
             <input type="hidden" {...register("job_url")} />
             <input type="hidden" {...register("scrape_status")} />
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="title" className="block text-sm font-medium text-slate-700">
-                  Title
-                </label>
-                <input id="title" className={inputClass} {...register("title")} />
+            <section className={sectionClass}>
+              <h3 className={sectionTitleClass}>Role details</h3>
+              <p className={sectionSubtitleClass}>
+                Edit anything the scraper missed before saving.
+              </p>
+              <div className={`mt-4 ${fieldGridClass}`}>
+                <div className={fieldClass}>
+                  <label htmlFor="add-title" className={labelClass}>
+                    Title
+                  </label>
+                  <input
+                    id="add-title"
+                    className={inputClass}
+                    {...register("title")}
+                  />
+                </div>
+                <div className={fieldClass}>
+                  <label htmlFor="add-company" className={labelClass}>
+                    Company
+                  </label>
+                  <input
+                    id="add-company"
+                    className={inputClass}
+                    {...register("company")}
+                  />
+                </div>
+                <div className={fieldClass}>
+                  <label htmlFor="add-location" className={labelClass}>
+                    Location
+                  </label>
+                  <input
+                    id="add-location"
+                    className={inputClass}
+                    {...register("location")}
+                  />
+                </div>
+                <div className={fieldClass}>
+                  <label htmlFor="add-work_type" className={labelClass}>
+                    Work type
+                  </label>
+                  <select
+                    id="add-work_type"
+                    className={selectClass}
+                    {...register("work_type")}
+                  >
+                    {WORK_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {WORK_TYPE_LABELS[type]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className={fieldClass}>
+                  <label htmlFor="add-employment_type" className={labelClass}>
+                    Employment type
+                  </label>
+                  <input
+                    id="add-employment_type"
+                    className={inputClass}
+                    {...register("employment_type")}
+                  />
+                </div>
+                <div className={fieldClass}>
+                  <label htmlFor="add-salary_text" className={labelClass}>
+                    Salary
+                  </label>
+                  <input
+                    id="add-salary_text"
+                    className={inputClass}
+                    {...register("salary_text")}
+                  />
+                </div>
+                <div className={fieldClass}>
+                  <label htmlFor="add-date_posted" className={labelClass}>
+                    Date posted
+                  </label>
+                  <input
+                    id="add-date_posted"
+                    type="date"
+                    className={dateInputClass}
+                    {...register("date_posted")}
+                  />
+                </div>
+                <div className={fieldClass}>
+                  <label htmlFor="add-applied_at" className={labelClass}>
+                    Applied date
+                  </label>
+                  <input
+                    id="add-applied_at"
+                    type="date"
+                    className={dateInputClass}
+                    {...register("applied_at")}
+                  />
+                  {errors.applied_at ? (
+                    <p className={fieldErrorClass}>{errors.applied_at.message}</p>
+                  ) : null}
+                </div>
               </div>
-              <div>
-                <label htmlFor="company" className="block text-sm font-medium text-slate-700">
-                  Company
-                </label>
-                <input id="company" className={inputClass} {...register("company")} />
-              </div>
-              <div>
-                <label htmlFor="location" className="block text-sm font-medium text-slate-700">
-                  Location
-                </label>
-                <input id="location" className={inputClass} {...register("location")} />
-              </div>
-              <div>
-                <label htmlFor="work_type" className="block text-sm font-medium text-slate-700">
-                  Work type
-                </label>
-                <select id="work_type" className={inputClass} {...register("work_type")}>
-                  {WORK_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {WORK_TYPE_LABELS[type]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label
-                  htmlFor="employment_type"
-                  className="block text-sm font-medium text-slate-700"
-                >
-                  Employment type
-                </label>
-                <input
-                  id="employment_type"
-                  className={inputClass}
-                  {...register("employment_type")}
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="salary_text"
-                  className="block text-sm font-medium text-slate-700"
-                >
-                  Salary
-                </label>
-                <input
-                  id="salary_text"
-                  className={inputClass}
-                  {...register("salary_text")}
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="date_posted"
-                  className="block text-sm font-medium text-slate-700"
-                >
-                  Date posted
-                </label>
-                <input
-                  id="date_posted"
-                  type="date"
-                  className={inputClass}
-                  {...register("date_posted")}
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="applied_at"
-                  className="block text-sm font-medium text-slate-700"
-                >
-                  Applied date
-                </label>
-                <input
-                  id="applied_at"
-                  type="date"
-                  className={inputClass}
-                  {...register("applied_at")}
-                />
-                {errors.applied_at ? (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.applied_at.message}
-                  </p>
-                ) : null}
-              </div>
-            </div>
 
-            <div>
-              <label
-                htmlFor="description"
-                className="block text-sm font-medium text-slate-700"
-              >
-                Description
-              </label>
-              <textarea
-                id="description"
-                rows={5}
-                className={inputClass}
-                {...register("description")}
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="resume_id" className="block text-sm font-medium text-slate-700">
-                  Resume
+              <div className={`mt-4 ${fieldClass}`}>
+                <label htmlFor="add-description" className={labelClass}>
+                  Description
                 </label>
-                <select id="resume_id" className={inputClass} {...register("resume_id")}>
-                  <option value="">None</option>
-                  {resumes.map((doc) => (
-                    <option key={doc.id} value={doc.id}>
-                      {doc.label}
-                    </option>
-                  ))}
-                </select>
-                <Link
-                  to="/documents"
-                  onClick={onClose}
-                  className="mt-1 inline-block text-xs font-medium text-teal-700 hover:underline"
-                >
-                  Upload resumes
-                </Link>
+                <textarea
+                  id="add-description"
+                  rows={5}
+                  className={textareaClass}
+                  {...register("description")}
+                />
               </div>
-              <div>
-                <label
-                  htmlFor="cover_letter_id"
-                  className="block text-sm font-medium text-slate-700"
-                >
-                  Cover letter
-                </label>
-                <select
-                  id="cover_letter_id"
-                  className={inputClass}
-                  {...register("cover_letter_id")}
-                >
-                  <option value="">None</option>
-                  {coverLetters.map((doc) => (
-                    <option key={doc.id} value={doc.id}>
-                      {doc.label}
-                    </option>
-                  ))}
-                </select>
-                <Link
-                  to="/documents"
-                  onClick={onClose}
-                  className="mt-1 inline-block text-xs font-medium text-teal-700 hover:underline"
-                >
-                  Upload cover letters
-                </Link>
-              </div>
-            </div>
+            </section>
 
-            <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-slate-700">
-                Notes
-              </label>
-              <textarea id="notes" rows={3} className={inputClass} {...register("notes")} />
-            </div>
+            <section className={sectionClass}>
+              <h3 className={sectionTitleClass}>Documents & notes</h3>
+              <p className={sectionSubtitleClass}>
+                Link the resume and cover letter you used for this role.
+              </p>
+              <div className={`mt-4 ${fieldGridClass}`}>
+                <div className={fieldClass}>
+                  <label htmlFor="add-resume_id" className={labelClass}>
+                    Resume
+                  </label>
+                  <select
+                    id="add-resume_id"
+                    className={selectClass}
+                    {...register("resume_id")}
+                  >
+                    <option value="">None</option>
+                    {resumes.map((doc) => (
+                      <option key={doc.id} value={doc.id}>
+                        {doc.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Link
+                    to="/documents"
+                    onClick={onClose}
+                    className={linkQuietClass}
+                  >
+                    Upload resumes
+                  </Link>
+                </div>
+                <div className={fieldClass}>
+                  <label htmlFor="add-cover_letter_id" className={labelClass}>
+                    Cover letter
+                  </label>
+                  <select
+                    id="add-cover_letter_id"
+                    className={selectClass}
+                    {...register("cover_letter_id")}
+                  >
+                    <option value="">None</option>
+                    {coverLetters.map((doc) => (
+                      <option key={doc.id} value={doc.id}>
+                        {doc.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Link
+                    to="/documents"
+                    onClick={onClose}
+                    className={linkQuietClass}
+                  >
+                    Upload cover letters
+                  </Link>
+                </div>
+              </div>
+
+              <div className={`mt-4 ${fieldClass}`}>
+                <label htmlFor="add-notes" className={labelClass}>
+                  Notes
+                </label>
+                <textarea
+                  id="add-notes"
+                  rows={3}
+                  className={textareaClass}
+                  {...register("notes")}
+                />
+              </div>
+            </section>
 
             {errors.job_url ? (
-              <p className="text-sm text-red-600">{errors.job_url.message}</p>
+              <p className={fieldErrorClass}>{errors.job_url.message}</p>
             ) : null}
 
-            <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
+            <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:justify-end">
+              <button type="button" onClick={onClose} className={btnSecondaryClass}>
                 Cancel
               </button>
               <button
                 type="submit"
-                disabled={isSubmitting || createMutation.isPending || Boolean(existingId)}
-                className="rounded-md bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-60"
+                disabled={
+                  isSubmitting || createMutation.isPending || Boolean(existingId)
+                }
+                className={btnPrimaryClass}
               >
                 {createMutation.isPending ? "Saving…" : "Save application"}
               </button>

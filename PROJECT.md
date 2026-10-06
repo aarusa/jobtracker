@@ -80,8 +80,8 @@ Primary user: a job seeker managing many applications at once.
 | Scraping | httpx, BeautifulSoup4 (lxml) |
 | Auth | JWT in httpOnly cookie, argon2 password hashing (pwdlib) |
 | File storage | Local disk behind a storage interface (`storage.py`), swappable for S3-compatible storage later |
-| Testing | pytest + FastAPI TestClient (backend), Vitest + React Testing Library (frontend) |
-| Tooling | Ruff (Python lint/format), ESLint + Prettier (frontend) |
+| Testing | pytest + FastAPI TestClient (backend) |
+| Tooling | Ruff (Python lint/format), oxlint (frontend) |
 
 Why PostgreSQL: the data is relational (users, applications, documents, status history), needs enums, constraints, and indexes, and Postgres is easy to host later.
 
@@ -156,7 +156,7 @@ Rules:
 - Responsive from mobile to desktop. Keyboard accessible, visible focus states, labelled form fields.
 - Status shown as a coloured badge and editable via a dropdown.
 - Show loading, empty, and error states for every list and form.
-- Pages: `/login`, `/register`, `/` (applications list), `/applications/:id`, `/documents`.
+- Pages: `/` (landing), `/login`, `/register`, `/forgot-password`, `/reset-password`, `/applications`, `/applications/:id`, `/documents`.
 - "Add application" is a prominent button that opens a modal or page with the paste-URL flow.
 
 ## 9. Conventions

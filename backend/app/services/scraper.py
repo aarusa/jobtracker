@@ -385,10 +385,7 @@ def _format_money_amount(amount: Any, currency: str | None) -> str | None:
         symbol = _CURRENCY_SYMBOLS.get((currency or "").upper(), currency or "")
         return f"{symbol}{text}".strip() if symbol else text
 
-    if number.is_integer():
-        formatted = f"{int(number):,}"
-    else:
-        formatted = f"{number:,.2f}"
+    formatted = f"{int(number):,}" if number.is_integer() else f"{number:,.2f}"
     symbol = _CURRENCY_SYMBOLS.get((currency or "").upper(), currency or "")
     if symbol:
         return f"{symbol}{formatted}"
@@ -493,7 +490,11 @@ def _apply_jsonld(job: ScrapedJob, soup: BeautifulSoup) -> None:
             _set_if_empty(job, "title", _schema_text(node.get("title") or node.get("name")))
             _set_if_empty(job, "company", _company_from_jsonld(node))
             _set_if_empty(job, "location", _job_location_from_jsonld(node))
-            _set_if_empty(job, "employment_type", _format_employment_type(node.get("employmentType")))
+            _set_if_empty(
+                job,
+                "employment_type",
+                _format_employment_type(node.get("employmentType")),
+            )
             _set_if_empty(job, "salary_text", _salary_from_jsonld(node))
             description = node.get("description")
             if isinstance(description, str):

@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import {
   fetchDocumentBlob,
@@ -19,6 +19,7 @@ export function DocumentPreviewModal({
   onDownload,
 }: DocumentPreviewModalProps) {
   const titleId = useId();
+  const closeRef = useRef<HTMLButtonElement>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +72,7 @@ export function DocumentPreviewModal({
 
   useEffect(() => {
     if (!document) return;
+    requestAnimationFrame(() => closeRef.current?.focus());
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
@@ -118,6 +120,7 @@ export function DocumentPreviewModal({
               Download
             </button>
             <button
+              ref={closeRef}
               type="button"
               onClick={onClose}
               className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
@@ -139,7 +142,7 @@ export function DocumentPreviewModal({
                 <button
                   type="button"
                   onClick={() => onDownload(document)}
-                  className="rounded-md bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"
+                  className="rounded-md bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
                 >
                   Download instead
                 </button>
@@ -160,7 +163,7 @@ export function DocumentPreviewModal({
               <button
                 type="button"
                 onClick={() => onDownload(document)}
-                className="rounded-md bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800"
+                className="rounded-md bg-teal-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
               >
                 Download {document.original_filename}
               </button>

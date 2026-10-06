@@ -34,14 +34,14 @@ export function RegisterPage() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/applications" replace />;
   }
 
   async function onSubmit(values: RegisterFormValues) {
     setFormError(null);
     try {
       await registerMutation.mutateAsync(values);
-      navigate("/", { replace: true });
+      navigate("/applications", { replace: true });
     } catch (error) {
       if (error instanceof ApiError) {
         setFormError(error.detail);
@@ -54,9 +54,12 @@ export function RegisterPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        <p className="text-sm font-medium uppercase tracking-wide text-slate-500">
+        <Link
+          to="/"
+          className="text-sm font-medium uppercase tracking-wide text-slate-500 hover:text-slate-700"
+        >
           Job Application Tracker
-        </p>
+        </Link>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
           Create account
         </h1>

@@ -13,6 +13,22 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
+    remember_me: bool = False
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    detail: str
+    # Only present when EXPOSE_DEV_RESET_LINK=true (local testing without email).
+    dev_reset_url: str | None = None
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=1, max_length=200)
+    password: str = Field(min_length=8, max_length=128)
 
 
 class UserOut(BaseModel):
