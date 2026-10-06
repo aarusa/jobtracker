@@ -8,17 +8,24 @@ export type User = {
 export class ApiError extends Error {
   status: number;
   detail: string;
+  existingApplicationId?: string;
 
-  constructor(status: number, detail: string) {
+  constructor(
+    status: number,
+    detail: string,
+    existingApplicationId?: string,
+  ) {
     super(detail);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
+    this.existingApplicationId = existingApplicationId;
   }
 }
 
 type ErrorBody = {
   detail?: string | Array<{ msg?: string }>;
+  existing_application_id?: string;
 };
 
 export async function apiFetch<T>(
@@ -45,6 +52,7 @@ export async function apiFetch<T>(
   const contentType = response.headers.get("Content-Type") ?? "";
   if (!response.ok) {
     let detail = "Something went wrong";
+    let existingApplicationId: string | undefined;
     if (contentType.includes("application/json")) {
       const body = (await response.json()) as ErrorBody;
       if (typeof body.detail === "string") {
@@ -52,8 +60,11 @@ export async function apiFetch<T>(
       } else if (Array.isArray(body.detail) && body.detail[0]?.msg) {
         detail = body.detail[0].msg;
       }
+      if (typeof body.existing_application_id === "string") {
+        existingApplicationId = body.existing_application_id;
+      }
     }
-    throw new ApiError(response.status, detail);
+    throw new ApiError(response.status, detail, existingApplicationId);
   }
 
   if (contentType.includes("application/json")) {
