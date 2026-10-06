@@ -45,7 +45,13 @@ def test_upload_list_download_rename_delete(
     download = client.get(f"/api/documents/{document_id}/download")
     assert download.status_code == 200
     assert download.content.startswith(b"%PDF")
+    assert "attachment" in download.headers.get("content-disposition", "").lower()
     assert "resume.pdf" in download.headers.get("content-disposition", "")
+
+    preview = client.get(f"/api/documents/{document_id}/view")
+    assert preview.status_code == 200
+    assert preview.content.startswith(b"%PDF")
+    assert "inline" in preview.headers.get("content-disposition", "").lower()
 
     renamed = client.patch(
         f"/api/documents/{document_id}",
@@ -105,6 +111,7 @@ def test_other_user_cannot_access_document(client: TestClient) -> None:
     register_and_login(client, email="intruder@example.com", name="Intruder")
 
     assert client.get(f"/api/documents/{document_id}/download").status_code == 404
+    assert client.get(f"/api/documents/{document_id}/view").status_code == 404
     assert (
         client.patch(
             f"/api/documents/{document_id}",

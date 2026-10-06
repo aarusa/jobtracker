@@ -142,7 +142,8 @@ Partial update. Any field from the create body plus `status` and `notes`. When `
 | GET | `/documents` | List the user's documents; optional `kind` filter (`resume` or `cover_letter`) |
 | POST | `/documents` | Upload (`multipart/form-data`) |
 | PATCH | `/documents/{id}` | Rename: `{ label }` |
-| GET | `/documents/{id}/download` | Download the file (owner only) |
+| GET | `/documents/{id}/view` | Stream the file for inline preview (`Content-Disposition: inline`; owner only) |
+| GET | `/documents/{id}/download` | Download the file (`Content-Disposition: attachment`; owner only) |
 | DELETE | `/documents/{id}` | Delete file and record (`204`) |
 
 ### POST /documents
@@ -163,6 +164,9 @@ Response `201`:
   "used_by_count": 0
 }
 ```
+
+### GET /documents/{id}/view
+Returns the raw file bytes with `Content-Disposition: inline` so the browser (or an in-app preview) can display it. Same ownership rules as download: other users get `404`. PDFs preview well in-browser; DOCX may need to be downloaded.
 
 ### DELETE /documents/{id}
 Applications referencing the document have `resume_id` or `cover_letter_id` set to null. The frontend should confirm first using `used_by_count` from the list response.

@@ -26,7 +26,9 @@ export async function apiFetch<T>(
   init: RequestInit = {},
 ): Promise<T> {
   const headers = new Headers(init.headers);
-  if (init.body && !headers.has("Content-Type")) {
+  const isFormData =
+    typeof FormData !== "undefined" && init.body instanceof FormData;
+  if (init.body && !isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -40,19 +42,55 @@ export async function apiFetch<T>(
     return undefined as T;
   }
 
-  const text = await response.text();
-  const data = text ? (JSON.parse(text) as unknown) : null;
-
+  const contentType = response.headers.get("Content-Type") ?? "";
   if (!response.ok) {
-    const body = data as ErrorBody | null;
     let detail = "Something went wrong";
-    if (typeof body?.detail === "string") {
-      detail = body.detail;
-    } else if (Array.isArray(body?.detail) && body.detail[0]?.msg) {
-      detail = body.detail[0].msg;
+    if (contentType.includes("application/json")) {
+      const body = (await response.json()) as ErrorBody;
+      if (typeof body.detail === "string") {
+        detail = body.detail;
+      } else if (Array.isArray(body.detail) && body.detail[0]?.msg) {
+        detail = body.detail[0].msg;
+      }
     }
     throw new ApiError(response.status, detail);
   }
 
-  return data as T;
+  if (contentType.includes("application/json")) {
+    return (await response.json()) as T;
+  }
+
+  const text = await response.text();
+  return (text ? JSON.parse(text) : null) as T;
+}
+
+export async function apiDownload(
+  path: string,
+  filename: string,
+): Promise<void> {
+  const blob = await apiBlob(path);
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+export async function apiBlob(path: string): Promise<Blob> {
+  const response = await fetch(path, { credentials: "include" });
+  if (!response.ok) {
+    let detail = "Request failed";
+    const contentType = response.headers.get("Content-Type") ?? "";
+    if (contentType.includes("application/json")) {
+      const body = (await response.json()) as ErrorBody;
+      if (typeof body.detail === "string") {
+        detail = body.detail;
+      }
+    }
+    throw new ApiError(response.status, detail);
+  }
+  return response.blob();
 }

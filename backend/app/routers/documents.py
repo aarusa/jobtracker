@@ -146,14 +146,12 @@ def rename_document(
     return _to_out(document, used_by_count=int(count or 0))
 
 
-@router.get("/{document_id}/download")
-def download_document(
-    document_id: uuid.UUID,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    storage: Storage = Depends(get_storage),
+def _file_response(
+    document: Document,
+    storage: Storage,
+    *,
+    content_disposition_type: str,
 ) -> FileResponse:
-    document = _get_owned_document(db, document_id=document_id, user=current_user)
     try:
         path: Path = storage.open(document.storage_key)
     except FileNotFoundError as exc:
@@ -166,7 +164,31 @@ def download_document(
         path=path,
         media_type=document.mime_type,
         filename=document.original_filename,
+        content_disposition_type=content_disposition_type,
     )
+
+
+@router.get("/{document_id}/view")
+def view_document(
+    document_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    storage: Storage = Depends(get_storage),
+) -> FileResponse:
+    """Serve the file inline for in-app preview (owner only)."""
+    document = _get_owned_document(db, document_id=document_id, user=current_user)
+    return _file_response(document, storage, content_disposition_type="inline")
+
+
+@router.get("/{document_id}/download")
+def download_document(
+    document_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    storage: Storage = Depends(get_storage),
+) -> FileResponse:
+    document = _get_owned_document(db, document_id=document_id, user=current_user)
+    return _file_response(document, storage, content_disposition_type="attachment")
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
