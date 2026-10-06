@@ -5,6 +5,7 @@ src = ["app", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["B008"]  # FastAPI Depends() / Cookie() in defaults is intentional
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
