@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Fallback title should not win</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org/",
+        "@type": "JobPosting",
+        "title": "Senior Backend Engineer",
+        "description": "<p>Build APIs.</p><ul><li>Python</li><li>PostgreSQL</li></ul>",
+        "datePosted": "2026-10-01",
+        "employmentType": "FULL_TIME",
+        "hiringOrganization": {
+          "@type": "Organization",
+          "name": "Example Pty Ltd"
+        },
+        "jobLocation": {
+          "@type": "Place",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Melbourne",
+            "addressRegion": "VIC",
+            "addressCountry": "AU"
+          }
+        },
+        "jobLocationType": "TELECOMMUTE",
+        "baseSalary": {
+          "@type": "MonetaryAmount",
+          "currency": "AUD",
+          "value": {
+            "@type": "QuantitativeValue",
+            "minValue": 140000,
+            "maxValue": 160000,
+            "unitText": "YEAR"
+          }
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <h1>Ignored heading</h1>
+  </body>
+</html>
