@@ -293,14 +293,10 @@ export function ApplicationsPage() {
                 <thead className="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500">
                   <tr>
                     <th className="px-4 py-3">Company / Title</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Applied</th>
-                    <th className="px-4 py-3">Work type</th>
+                    <th className="whitespace-nowrap px-4 py-3">Work type</th>
                     <th className="px-4 py-3">Employment</th>
-                    <th className="px-4 py-3">Source</th>
-                    <th className="px-4 py-3">
-                      <span className="sr-only">Actions</span>
-                    </th>
+                    <th className="whitespace-nowrap px-4 py-3">Applied</th>
+                    <th className="whitespace-nowrap px-4 py-3">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -315,7 +311,16 @@ export function ApplicationsPage() {
                         </Link>
                         <p className="text-slate-600">{app.title || "Untitled role"}</p>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-700">
+                        {WORK_TYPE_LABELS[app.work_type] ?? "—"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {app.employment_type?.trim() || "—"}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-700">
+                        {formatDisplayDate(app.applied_at)}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
                         <label className="sr-only" htmlFor={`status-desktop-${app.id}`}>
                           Status for {app.company || app.title || "application"}
                         </label>
@@ -325,26 +330,6 @@ export function ApplicationsPage() {
                           disabled={updateMutation.isPending}
                           onChange={(status) => void handleStatusChange(app, status)}
                         />
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        {formatDisplayDate(app.applied_at)}
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        {WORK_TYPE_LABELS[app.work_type] ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        {app.employment_type?.trim() || "—"}
-                      </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        {app.source_domain ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Link
-                          to={`/applications/${app.id}`}
-                          className="whitespace-nowrap text-sm font-medium text-teal-700 hover:underline"
-                        >
-                          View details
-                        </Link>
                       </td>
                     </tr>
                   ))}
@@ -367,6 +352,20 @@ export function ApplicationsPage() {
                   <p className="text-sm text-slate-600">
                     {app.title || "Untitled role"}
                   </p>
+                  <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
+                    <div>
+                      <dt className="font-medium text-slate-500">Work type</dt>
+                      <dd>{WORK_TYPE_LABELS[app.work_type] ?? "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-slate-500">Employment</dt>
+                      <dd>{app.employment_type?.trim() || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium text-slate-500">Applied</dt>
+                      <dd>{formatDisplayDate(app.applied_at)}</dd>
+                    </div>
+                  </dl>
                   <div className="mt-3">
                     <label className="sr-only" htmlFor={`status-${app.id}`}>
                       Status
@@ -378,30 +377,6 @@ export function ApplicationsPage() {
                       onChange={(status) => void handleStatusChange(app, status)}
                     />
                   </div>
-                  <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
-                    <div>
-                      <dt className="font-medium text-slate-500">Applied</dt>
-                      <dd>{formatDisplayDate(app.applied_at)}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-slate-500">Source</dt>
-                      <dd>{app.source_domain ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-slate-500">Work type</dt>
-                      <dd>{WORK_TYPE_LABELS[app.work_type] ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="font-medium text-slate-500">Employment</dt>
-                      <dd>{app.employment_type?.trim() || "—"}</dd>
-                    </div>
-                  </dl>
-                  <Link
-                    to={`/applications/${app.id}`}
-                    className="mt-3 inline-block text-sm font-medium text-teal-700 hover:underline"
-                  >
-                    View details
-                  </Link>
                 </li>
               ))}
             </ul>

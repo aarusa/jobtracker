@@ -419,6 +419,7 @@ export function ApplicationDetailPage() {
                 onChange={(status) =>
                   setValue("status", status, { shouldDirty: true })
                 }
+                className="w-full"
               />
             </div>
             <div className={fieldClass}>

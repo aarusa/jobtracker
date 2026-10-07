@@ -3,7 +3,6 @@ import {
   STATUS_LABELS,
   type ApplicationStatus,
 } from "../lib/constants";
-import { selectClass } from "../lib/formStyles";
 
 type StatusSelectProps = {
   value: ApplicationStatus;
@@ -12,6 +11,9 @@ type StatusSelectProps = {
   id?: string;
   className?: string;
 };
+
+const statusSelectClass =
+  "block h-9 min-w-[8.75rem] rounded-lg border border-slate-300 bg-white px-2.5 text-sm leading-normal text-slate-900 shadow-sm transition focus:border-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-600/20 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500";
 
 export function StatusSelect({
   value,
@@ -26,7 +28,7 @@ export function StatusSelect({
       value={value}
       disabled={disabled}
       onChange={(event) => onChange(event.target.value as ApplicationStatus)}
-      className={`${selectClass} ${className}`.trim()}
+      className={`${statusSelectClass} ${className}`.trim()}
     >
       {APPLICATION_STATUSES.map((status) => (
         <option key={status} value={status}>
