@@ -20,7 +20,7 @@ const features = [
 export function LandingPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const primaryTo = isAuthenticated ? "/applications" : "/register";
-  const primaryLabel = isAuthenticated ? "Open applications" : "Get started free";
+  const primaryLabel = isAuthenticated ? "Open app" : "Get started free";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">

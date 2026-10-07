@@ -129,6 +129,71 @@ def test_login_remember_me_sets_longer_cookie(client: TestClient) -> None:
     assert "2592000" in set_cookie
 
 
+def test_update_profile_name_and_password(client: TestClient) -> None:
+    _register(client, email="profile@example.com", password="password123", name="old name")
+    response = client.patch(
+        "/api/auth/me",
+        json={
+            "name": "new name",
+            "current_password": "password123",
+            "new_password": "password456",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["name"] == "New Name"
+    assert response.json()["email"] == "profile@example.com"
+
+    client.cookies.clear()
+    assert (
+        client.post(
+            "/api/auth/login",
+            json={"email": "profile@example.com", "password": "password123"},
+        ).status_code
+        == 401
+    )
+    assert (
+        client.post(
+            "/api/auth/login",
+            json={"email": "profile@example.com", "password": "password456"},
+        ).status_code
+        == 200
+    )
+
+
+def test_update_profile_wrong_current_password(client: TestClient) -> None:
+    _register(client, email="badpw@example.com", password="password123")
+    response = client.patch(
+        "/api/auth/me",
+        json={"current_password": "nope", "new_password": "password456"},
+    )
+    assert response.status_code == 401
+
+
+def test_delete_account(client: TestClient) -> None:
+    _register(client, email="gone@example.com", password="password123")
+    bad = client.request(
+        "DELETE",
+        "/api/auth/me",
+        json={"password": "wrong"},
+    )
+    assert bad.status_code == 401
+
+    response = client.request(
+        "DELETE",
+        "/api/auth/me",
+        json={"password": "password123"},
+    )
+    assert response.status_code == 204
+    client.cookies.clear()
+    assert (
+        client.post(
+            "/api/auth/login",
+            json={"email": "gone@example.com", "password": "password123"},
+        ).status_code
+        == 401
+    )
+
+
 def test_forgot_and_reset_password_flow(
     client: TestClient, monkeypatch: object
 ) -> None:

@@ -26,6 +26,16 @@ export type ResetPasswordPayload = {
   password: string;
 };
 
+export type UpdateProfilePayload = {
+  name?: string;
+  current_password?: string;
+  new_password?: string;
+};
+
+export type DeleteAccountPayload = {
+  password: string;
+};
+
 export function register(payload: RegisterPayload): Promise<User> {
   return apiFetch<User>("/api/auth/register", {
     method: "POST",
@@ -62,4 +72,18 @@ export function logout(): Promise<void> {
 
 export function getMe(): Promise<User> {
   return apiFetch<User>("/api/auth/me");
+}
+
+export function updateProfile(payload: UpdateProfilePayload): Promise<User> {
+  return apiFetch<User>("/api/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteAccount(payload: DeleteAccountPayload): Promise<void> {
+  return apiFetch<void>("/api/auth/me", {
+    method: "DELETE",
+    body: JSON.stringify(payload),
+  });
 }

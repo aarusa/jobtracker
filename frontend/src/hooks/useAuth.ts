@@ -1,7 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { getMe, login, logout, register } from "../api/auth";
-import type { LoginPayload, RegisterPayload } from "../api/auth";
+import {
+  deleteAccount,
+  getMe,
+  login,
+  logout,
+  register,
+  updateProfile,
+} from "../api/auth";
+import type {
+  DeleteAccountPayload,
+  LoginPayload,
+  RegisterPayload,
+  UpdateProfilePayload,
+} from "../api/auth";
 import { ApiError } from "../api/client";
 
 export const authQueryKey = ["auth", "me"] as const;
@@ -51,6 +63,27 @@ export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => logout(),
+    onSuccess: () => {
+      queryClient.setQueryData(authQueryKey, null);
+      queryClient.clear();
+    },
+  });
+}
+
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateProfilePayload) => updateProfile(payload),
+    onSuccess: (user) => {
+      queryClient.setQueryData(authQueryKey, user);
+    },
+  });
+}
+
+export function useDeleteAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: DeleteAccountPayload) => deleteAccount(payload),
     onSuccess: () => {
       queryClient.setQueryData(authQueryKey, null);
       queryClient.clear();

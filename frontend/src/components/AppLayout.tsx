@@ -19,7 +19,7 @@ export function AppLayout() {
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-6">
             <Link
-              to="/applications"
+              to="/"
               className="shrink-0 text-base font-semibold tracking-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
             >
               Job Tracker
@@ -39,9 +39,12 @@ export function AppLayout() {
 
           <div className="flex items-center gap-3">
             {user?.name ? (
-              <span className="max-w-[10rem] truncate text-sm text-slate-600 sm:max-w-none">
+              <Link
+                to="/profile"
+                className="max-w-[10rem] truncate text-sm font-medium text-slate-700 hover:text-teal-800 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600 sm:max-w-none"
+              >
                 {toDisplayName(user.name)}
-              </span>
+              </Link>
             ) : null}
             <button
               type="button"

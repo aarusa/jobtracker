@@ -156,7 +156,7 @@ Rules:
 - Responsive from mobile to desktop. Keyboard accessible, visible focus states, labelled form fields.
 - Status shown as a coloured badge and editable via a dropdown.
 - Show loading, empty, and error states for every list and form.
-- Pages: `/` (landing), `/login`, `/register`, `/forgot-password`, `/reset-password`, `/applications`, `/applications/:id`, `/documents`.
+- Pages: `/` (landing), `/login`, `/register`, `/forgot-password`, `/reset-password`, `/applications`, `/applications/:id`, `/documents`, `/profile`.
 - "Add application" is a prominent button that opens a modal or page with the paste-URL flow.
 
 ## 9. Conventions

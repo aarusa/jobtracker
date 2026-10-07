@@ -13,6 +13,7 @@ import {
   APPLICATION_STATUSES,
   SORT_OPTIONS,
   STATUS_LABELS,
+  WORK_TYPE_LABELS,
   formatDisplayDate,
   type ApplicationStatus,
 } from "../lib/constants";
@@ -294,8 +295,8 @@ export function ApplicationsPage() {
                     <th className="px-4 py-3">Company / Title</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Applied</th>
-                    <th className="px-4 py-3">Resume</th>
-                    <th className="px-4 py-3">Cover letter</th>
+                    <th className="px-4 py-3">Work type</th>
+                    <th className="px-4 py-3">Employment</th>
                     <th className="px-4 py-3">Source</th>
                     <th className="px-4 py-3">
                       <span className="sr-only">Actions</span>
@@ -329,10 +330,10 @@ export function ApplicationsPage() {
                         {formatDisplayDate(app.applied_at)}
                       </td>
                       <td className="px-4 py-3 text-slate-700">
-                        {app.resume?.label ?? "—"}
+                        {WORK_TYPE_LABELS[app.work_type] ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-slate-700">
-                        {app.cover_letter?.label ?? "—"}
+                        {app.employment_type?.trim() || "—"}
                       </td>
                       <td className="px-4 py-3 text-slate-700">
                         {app.source_domain ?? "—"}
@@ -387,12 +388,12 @@ export function ApplicationsPage() {
                       <dd>{app.source_domain ?? "—"}</dd>
                     </div>
                     <div>
-                      <dt className="font-medium text-slate-500">Resume</dt>
-                      <dd>{app.resume?.label ?? "—"}</dd>
+                      <dt className="font-medium text-slate-500">Work type</dt>
+                      <dd>{WORK_TYPE_LABELS[app.work_type] ?? "—"}</dd>
                     </div>
                     <div>
-                      <dt className="font-medium text-slate-500">Cover letter</dt>
-                      <dd>{app.cover_letter?.label ?? "—"}</dd>
+                      <dt className="font-medium text-slate-500">Employment</dt>
+                      <dd>{app.employment_type?.trim() || "—"}</dd>
                     </div>
                   </dl>
                   <Link

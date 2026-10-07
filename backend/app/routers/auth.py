@@ -7,13 +7,15 @@ from sqlalchemy.orm import Session
 from app.config import Settings, get_settings
 from app.db import get_db
 from app.deps import get_current_user
-from app.models import User
+from app.models import Document, User
 from app.schemas.auth import (
+    DeleteAccountRequest,
     ForgotPasswordRequest,
     ForgotPasswordResponse,
     LoginRequest,
     RegisterRequest,
     ResetPasswordRequest,
+    UpdateProfileRequest,
     UserOut,
 )
 from app.services.rate_limit import rate_limit
@@ -28,6 +30,7 @@ from app.services.security import (
     title_case_name,
     verify_password,
 )
+from app.services.storage import Storage, get_storage
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -203,3 +206,63 @@ def logout(
 @router.get("/me", response_model=UserOut)
 def me(current_user: User = Depends(get_current_user)) -> User:
     return current_user
+
+
+@router.patch("/me", response_model=UserOut)
+def update_me(
+    body: UpdateProfileRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if body.name is None and body.new_password is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide a new name and/or a new password",
+        )
+
+    if body.new_password is not None:
+        if not body.current_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is required to set a new password",
+            )
+        if not verify_password(body.current_password, current_user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Current password is incorrect",
+            )
+        current_user.password_hash = hash_password(body.new_password)
+
+    if body.name is not None:
+        current_user.name = title_case_name(body.name)
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_me(
+    body: DeleteAccountRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    settings: Settings = Depends(get_settings),
+    storage: Storage = Depends(get_storage),
+) -> None:
+    if not verify_password(body.password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Password is incorrect",
+        )
+
+    storage_keys = list(
+        db.scalars(
+            select(Document.storage_key).where(Document.user_id == current_user.id)
+        ).all()
+    )
+    db.delete(current_user)
+    db.commit()
+    for key in storage_keys:
+        storage.delete(key)
+    _clear_access_cookie(response, settings)
