@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { ApiError } from "../api/client";
 import {
@@ -11,6 +12,7 @@ import {
   type ProfileFormValues,
 } from "../features/auth/schemas";
 import {
+  authQueryKey,
   useAuth,
   useDeleteAccount,
   useUpdateProfile,
@@ -23,6 +25,7 @@ import {
   btnPrimaryClass,
   fieldClass,
   fieldErrorClass,
+  focusRing,
   inputClass,
   labelClass,
   sectionClass,
@@ -33,8 +36,10 @@ import {
 export function ProfilePage() {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const updateMutation = useUpdateProfile();
   const deleteMutation = useDeleteAccount();
+  const deleteTitleId = useId();
 
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -60,6 +65,7 @@ export function ProfilePage() {
     resolver: zodResolver(deleteAccountSchema),
     defaultValues: { password: "" },
   });
+  const { setFocus: setDeleteFocus } = deleteForm;
 
   useEffect(() => {
     if (!user) return;
@@ -98,6 +104,15 @@ export function ProfilePage() {
 
     try {
       await updateMutation.mutateAsync(payload);
+      if (payload.new_password) {
+        queryClient.setQueryData(authQueryKey, null);
+        queryClient.clear();
+        navigate("/login", {
+          replace: true,
+          state: { notice: "Password updated. Please log in again." },
+        });
+        return;
+      }
       setSaveMessage("Profile updated.");
       reset({
         name: payload.name ? toDisplayName(payload.name) : nextName,
@@ -125,12 +140,34 @@ export function ProfilePage() {
           ? error.detail
           : "Could not delete account. Please try again.",
       );
-      setDeleteOpen(false);
     }
   }
 
-  if (isLoading || !user) {
+  useEffect(() => {
+    if (!deleteOpen) return;
+    requestAnimationFrame(() => setDeleteFocus("password"));
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !deleteMutation.isPending) {
+        setDeleteOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [deleteOpen, deleteMutation.isPending, setDeleteFocus]);
+
+  if (isLoading) {
     return <p className="text-sm text-slate-600">Loading profile…</p>;
+  }
+
+  if (!user) {
+    return (
+      <div className={alertErrorClass}>
+        <p>Could not load your profile.</p>
+        <Link to="/applications" className="mt-2 inline-block font-medium underline">
+          Back to applications
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -149,7 +186,7 @@ export function ProfilePage() {
           {formError}
         </p>
       ) : null}
-      {deleteError ? (
+      {deleteError && !deleteOpen ? (
         <p role="alert" className={alertErrorClass}>
           {deleteError}
         </p>
@@ -298,20 +335,22 @@ export function ProfilePage() {
           <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="delete-account-title"
+            aria-labelledby={deleteTitleId}
             className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-5 shadow-lg"
             onClick={(event) => event.stopPropagation()}
           >
-            <h2
-              id="delete-account-title"
-              className="text-lg font-semibold text-slate-900"
-            >
+            <h2 id={deleteTitleId} className="text-lg font-semibold text-slate-900">
               Delete account?
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-600">
               Enter your password to confirm. All applications and documents will
               be removed.
             </p>
+            {deleteError ? (
+              <p role="alert" className={`mt-3 ${alertErrorClass}`}>
+                {deleteError}
+              </p>
+            ) : null}
             <form
               className="mt-4 space-y-4"
               onSubmit={deleteForm.handleSubmit(onDelete)}
@@ -339,14 +378,14 @@ export function ProfilePage() {
                   type="button"
                   disabled={deleteMutation.isPending}
                   onClick={() => setDeleteOpen(false)}
-                  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  className={`rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 ${focusRing}`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={deleteMutation.isPending}
-                  className="rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-60"
+                  className="rounded-md bg-red-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:opacity-60"
                 >
                   {deleteMutation.isPending ? "Deleting…" : "Delete account"}
                 </button>

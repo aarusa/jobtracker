@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import secrets
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import jwt
@@ -17,6 +18,12 @@ ALGORITHM = "HS256"
 _password_hash = PasswordHash.recommended()
 
 
+@dataclass(frozen=True)
+class AccessTokenClaims:
+    user_id: uuid.UUID
+    session_version: int
+
+
 def hash_password(password: str) -> str:
     return _password_hash.hash(password)
 
@@ -28,6 +35,7 @@ def verify_password(password: str, password_hash: str) -> bool:
 def create_access_token(
     user_id: uuid.UUID,
     *,
+    session_version: int = 0,
     settings: Settings | None = None,
     expires_minutes: int | None = None,
 ) -> str:
@@ -38,7 +46,11 @@ def create_access_token(
         else settings.access_token_expire_minutes
     )
     expire = datetime.now(UTC) + timedelta(minutes=minutes)
-    payload = {"sub": str(user_id), "exp": expire}
+    payload = {
+        "sub": str(user_id),
+        "sv": int(session_version),
+        "exp": expire,
+    }
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
 
 
@@ -62,7 +74,7 @@ def decode_access_token(
     token: str,
     *,
     settings: Settings | None = None,
-) -> uuid.UUID | None:
+) -> AccessTokenClaims | None:
     settings = settings or get_settings()
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
@@ -74,9 +86,17 @@ def decode_access_token(
         return None
 
     try:
-        return uuid.UUID(subject)
+        user_id = uuid.UUID(subject)
     except ValueError:
         return None
+
+    raw_sv = payload.get("sv", 0)
+    try:
+        session_version = int(raw_sv)
+    except (TypeError, ValueError):
+        return None
+
+    return AccessTokenClaims(user_id=user_id, session_version=session_version)
 
 
 def normalize_email(email: str) -> str:

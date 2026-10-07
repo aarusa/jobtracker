@@ -305,7 +305,7 @@ export function ApplicationsPage() {
                       <td className="px-4 py-3">
                         <Link
                           to={`/applications/${app.id}`}
-                          className="font-medium text-teal-800 hover:underline"
+                          className="rounded-sm font-medium text-teal-800 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
                         >
                           {app.company || "Unknown company"}
                         </Link>
@@ -345,7 +345,7 @@ export function ApplicationsPage() {
                 >
                   <Link
                     to={`/applications/${app.id}`}
-                    className="font-medium text-teal-800 hover:underline"
+                    className="rounded-sm font-medium text-teal-800 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
                   >
                     {app.company || "Unknown company"}
                   </Link>

@@ -18,6 +18,9 @@ erDiagram
         text email UK
         text password_hash
         text name
+        int session_version
+        text password_reset_token_hash
+        timestamptz password_reset_expires_at
         timestamptz created_at
     }
     documents {
@@ -82,7 +85,8 @@ erDiagram
 | email | text | unique, stored lowercased, not null |
 | password_hash | text | argon2 hash, not null |
 | name | text | not null; stored title-cased |
-| password_reset_token_hash | text | SHA-256 of one-time reset token; nullable |
+| session_version | integer | default 0; bumped on password change/reset to invalidate JWTs |
+| password_reset_token_hash | text | SHA-256 of one-time reset token; nullable; indexed |
 | password_reset_expires_at | timestamptz | reset token expiry; nullable |
 | created_at | timestamptz | default now() |
 

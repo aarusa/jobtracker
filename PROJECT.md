@@ -43,7 +43,9 @@ Primary user: a job seeker managing many applications at once.
 - Register with name, email, password. Login with email and password. Logout.
 - Passwords are hashed (argon2). Minimum 8 characters.
 - Session is a JWT stored in an **httpOnly, SameSite=Lax cookie**. No tokens in localStorage.
-- All endpoints except register, login, and health require auth.
+- Public endpoints: register, login, forgot-password, reset-password, and health. Everything else requires auth.
+- Profile: update name/password; delete account. Email cannot be changed.
+- Changing or resetting a password invalidates existing sessions.
 - Every query is scoped to the current user. Accessing another user's record returns 404.
 
 ### 3.2 Add application from URL
@@ -66,7 +68,7 @@ Primary user: a job seeker managing many applications at once.
 - Files are only downloadable by their owner.
 
 ### 3.5 Application list and detail
-- List: company, title, status dropdown, applied date, resume, cover letter, source. Search by company or title. Filter by status. Sort by applied date or last updated.
+- List: company/title, work type, employment type, applied date, status dropdown. Search by company or title. Filter by status. Sort by applied date or last updated. Open detail via the company name.
 - Detail: all fields editable, notes, resume and cover letter dropdowns, status history, link to the original job URL, and delete.
 - Simple summary counts per status at the top of the list.
 
@@ -115,7 +117,7 @@ job-tracker/
     │   ├── api/                 # fetch client + typed endpoint functions
     │   ├── components/          # shared UI (Button, Select, Modal, StatusBadge...)
     │   ├── features/            # auth/, applications/, documents/
-    │   ├── pages/               # LoginPage, RegisterPage, ApplicationsPage, ApplicationDetailPage, DocumentsPage
+    │   ├── pages/               # Landing, Login, Register, Forgot/Reset password, Applications, Detail, Documents, Profile
     │   ├── hooks/
     │   ├── lib/                 # utils, constants (status list), zod schemas
     │   └── main.tsx

@@ -26,7 +26,6 @@ from app.services.security import (
     hash_password,
     hash_password_reset_token,
     normalize_email,
-    password_reset_tokens_match,
     title_case_name,
     verify_password,
 )
@@ -95,7 +94,12 @@ def register(
     db.refresh(user)
 
     expire_minutes = settings.access_token_expire_minutes
-    token = create_access_token(user.id, settings=settings, expires_minutes=expire_minutes)
+    token = create_access_token(
+        user.id,
+        session_version=user.session_version,
+        settings=settings,
+        expires_minutes=expire_minutes,
+    )
     _set_access_cookie(response, token, settings, max_age_seconds=expire_minutes * 60)
     return user
 
@@ -123,7 +127,12 @@ def login(
     else:
         expire_minutes = settings.access_token_expire_minutes
 
-    token = create_access_token(user.id, settings=settings, expires_minutes=expire_minutes)
+    token = create_access_token(
+        user.id,
+        session_version=user.session_version,
+        settings=settings,
+        expires_minutes=expire_minutes,
+    )
     _set_access_cookie(response, token, settings, max_age_seconds=expire_minutes * 60)
     return user
 
@@ -161,16 +170,10 @@ def reset_password(
 ) -> None:
     rate_limit(request)
 
-    users = db.scalars(
-        select(User).where(User.password_reset_token_hash.is_not(None))
-    ).all()
-    matched: User | None = None
-    for user in users:
-        if user.password_reset_token_hash and password_reset_tokens_match(
-            body.token, user.password_reset_token_hash
-        ):
-            matched = user
-            break
+    token_hash = hash_password_reset_token(body.token)
+    matched = db.scalar(
+        select(User).where(User.password_reset_token_hash == token_hash)
+    )
 
     if matched is None:
         raise HTTPException(
@@ -189,6 +192,7 @@ def reset_password(
         )
 
     matched.password_hash = hash_password(body.password)
+    matched.session_version += 1
     matched.password_reset_token_hash = None
     matched.password_reset_expires_at = None
     db.commit()
@@ -211,8 +215,10 @@ def me(current_user: User = Depends(get_current_user)) -> User:
 @router.patch("/me", response_model=UserOut)
 def update_me(
     body: UpdateProfileRequest,
+    response: Response,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    settings: Settings = Depends(get_settings),
 ) -> User:
     if body.name is None and body.new_password is None:
         raise HTTPException(
@@ -220,6 +226,7 @@ def update_me(
             detail="Provide a new name and/or a new password",
         )
 
+    password_changed = False
     if body.new_password is not None:
         if not body.current_password:
             raise HTTPException(
@@ -232,12 +239,17 @@ def update_me(
                 detail="Current password is incorrect",
             )
         current_user.password_hash = hash_password(body.new_password)
+        current_user.session_version += 1
+        password_changed = True
 
     if body.name is not None:
         current_user.name = title_case_name(body.name)
 
     db.commit()
     db.refresh(current_user)
+    if password_changed:
+        # Invalidate this browser session; other sessions fail via session_version.
+        _clear_access_cookie(response, settings)
     return current_user
 
 

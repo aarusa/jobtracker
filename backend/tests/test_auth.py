@@ -142,6 +142,8 @@ def test_update_profile_name_and_password(client: TestClient) -> None:
     assert response.status_code == 200
     assert response.json()["name"] == "New Name"
     assert response.json()["email"] == "profile@example.com"
+    # Password change clears the session cookie.
+    assert client.get("/api/auth/me").status_code == 401
 
     client.cookies.clear()
     assert (
@@ -157,6 +159,20 @@ def test_update_profile_name_and_password(client: TestClient) -> None:
             json={"email": "profile@example.com", "password": "password456"},
         ).status_code
         == 200
+    )
+
+
+def test_profile_endpoints_require_auth(client: TestClient) -> None:
+    assert (
+        client.patch("/api/auth/me", json={"name": "Nope"}).status_code == 401
+    )
+    assert (
+        client.request(
+            "DELETE",
+            "/api/auth/me",
+            json={"password": "password123"},
+        ).status_code
+        == 401
     )
 
 

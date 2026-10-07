@@ -38,7 +38,18 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) for the landing page. After login, the app lives at `/applications`.
+Open [http://localhost:5173](http://localhost:5173) for the landing page.
+
+Main routes after setup:
+
+| Path | Purpose |
+|---|---|
+| `/` | Landing page |
+| `/login`, `/register` | Auth |
+| `/forgot-password`, `/reset-password` | Password reset |
+| `/applications`, `/applications/:id` | Application list and detail |
+| `/documents` | Resumes and cover letters |
+| `/profile` | Update name/password or delete account |
 
 API docs: [http://localhost:8000/docs](http://localhost:8000/docs). Health check: [http://localhost:8000/api/health](http://localhost:8000/api/health).
 

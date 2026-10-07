@@ -33,8 +33,9 @@ User object: `{ id, name, email, created_at }`. Email cannot be changed after re
 
 Rules: password minimum 8 characters; email unique (case-insensitive); names are stored title-cased; login and register (and password-reset endpoints) are rate limited; login errors never reveal whether the email exists (`401 Invalid email or password`).
 
-- `PATCH /auth/me`: update name and/or password. Changing password requires `current_password`. At least one of `name` or `new_password` is required. Email is never accepted.
+- `PATCH /auth/me`: update name and/or password. Changing password requires `current_password`. At least one of `name` or `new_password` is required. Email is never accepted. Changing password bumps `session_version` (invalidates other sessions) and clears the current cookie so the user must log in again.
 - `DELETE /auth/me`: requires the current password. Deletes the user, cascaded applications/history, document records, and stored files.
+- Password reset also bumps `session_version` so any existing logged-in sessions stop working.
 
 - `remember_me` (default `false`): when `true`, the JWT and cookie last `REMEMBER_ME_EXPIRE_DAYS` (default 30 days) instead of `ACCESS_TOKEN_EXPIRE_MINUTES`.
 - `forgot-password` always returns the same generic `detail` whether or not the email exists. Reset tokens expire in 1 hour. There is no email provider yet; when `EXPOSE_DEV_RESET_LINK=true`, the response may include `dev_reset_url` for local testing only — keep that flag off in production.

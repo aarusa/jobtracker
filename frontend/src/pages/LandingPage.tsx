@@ -17,6 +17,9 @@ const features = [
   },
 ];
 
+const focusLink =
+  "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600";
+
 export function LandingPage() {
   const { isAuthenticated, isLoading } = useAuth();
   const primaryTo = isAuthenticated ? "/applications" : "/register";
@@ -28,14 +31,17 @@ export function LandingPage() {
 
       <header className="relative z-10 border-b border-slate-200/80 bg-white/70 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <Link to="/" className="text-lg font-semibold tracking-tight text-slate-900">
+          <Link
+            to="/"
+            className={`rounded-sm text-lg font-semibold tracking-tight text-slate-900 ${focusLink}`}
+          >
             Job Tracker
           </Link>
-          <nav className="flex items-center gap-2 sm:gap-3">
+          <nav aria-label="Account" className="flex items-center gap-2 sm:gap-3">
             {isLoading ? null : isAuthenticated ? (
               <Link
                 to="/applications"
-                className="inline-flex h-10 items-center rounded-lg bg-teal-700 px-4 text-sm font-medium text-white hover:bg-teal-800"
+                className={`inline-flex h-10 items-center rounded-lg bg-teal-700 px-4 text-sm font-medium text-white hover:bg-teal-800 ${focusLink}`}
               >
                 Open app
               </Link>
@@ -43,13 +49,13 @@ export function LandingPage() {
               <>
                 <Link
                   to="/login"
-                  className="inline-flex h-10 items-center rounded-lg px-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  className={`inline-flex h-10 items-center rounded-lg px-3 text-sm font-medium text-slate-700 hover:bg-slate-100 ${focusLink}`}
                 >
                   Log in
                 </Link>
                 <Link
                   to="/register"
-                  className="inline-flex h-10 items-center rounded-lg bg-teal-700 px-4 text-sm font-medium text-white hover:bg-teal-800"
+                  className={`inline-flex h-10 items-center rounded-lg bg-teal-700 px-4 text-sm font-medium text-white hover:bg-teal-800 ${focusLink}`}
                 >
                   Sign up
                 </Link>
@@ -76,14 +82,14 @@ export function LandingPage() {
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
                 to={primaryTo}
-                className="inline-flex h-11 items-center rounded-lg bg-teal-700 px-5 text-sm font-medium text-white shadow-sm hover:bg-teal-800"
+                className={`inline-flex h-11 items-center rounded-lg bg-teal-700 px-5 text-sm font-medium text-white shadow-sm hover:bg-teal-800 ${focusLink}`}
               >
                 {primaryLabel}
               </Link>
               {!isAuthenticated ? (
                 <Link
                   to="/login"
-                  className="inline-flex h-11 items-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                  className={`inline-flex h-11 items-center rounded-lg border border-slate-300 bg-white px-5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 ${focusLink}`}
                 >
                   I already have an account
                 </Link>
@@ -162,9 +168,21 @@ export function LandingPage() {
         <div className="mx-auto flex max-w-5xl flex-col gap-2 px-4 py-6 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <p>Job Tracker — personal application tracking.</p>
           <p>
-            <Link to="/login" className="font-medium text-teal-700 hover:underline">
-              Log in
-            </Link>
+            {isAuthenticated ? (
+              <Link
+                to="/applications"
+                className={`font-medium text-teal-700 hover:underline ${focusLink} rounded-sm`}
+              >
+                Open app
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className={`font-medium text-teal-700 hover:underline ${focusLink} rounded-sm`}
+              >
+                Log in
+              </Link>
+            )}
           </p>
         </div>
       </footer>
