@@ -33,6 +33,7 @@ import {
   dateInputClass,
   fieldGridClass,
   focusRing,
+  hintClass,
   inputClass,
   labelClass,
   linkQuietClass,
@@ -42,6 +43,7 @@ import {
   selectClass,
   textareaClass,
 } from "../../lib/formStyles";
+import { parseTagsInput } from "../../lib/tags";
 
 type AddApplicationModalProps = {
   open: boolean;
@@ -63,6 +65,7 @@ const emptyDefaults: ApplicationFormValues = {
   cover_letter_id: "",
   scrape_status: "manual",
   notes: "",
+  tags: "",
 };
 
 function emptyToNull(value: string | undefined): string | null {
@@ -127,8 +130,16 @@ export function AddApplicationModal({ open, onClose }: AddApplicationModalProps)
     setValue("salary_text", result.salary_text ?? "");
     setValue("description", result.description ?? "");
     setValue("date_posted", result.date_posted ?? "");
-    setValue("scrape_status", result.scrape_status);
-    setScrapeMessage(result.message);
+    setValue(
+      "scrape_status",
+      result.scrape_status === "failed" ? "manual" : result.scrape_status,
+    );
+    setScrapeMessage(
+      result.message ||
+        (result.scrape_status === "failed"
+          ? "Could not fetch details automatically. Fill in the fields below and save."
+          : null),
+    );
     setExistingId(result.existing_application_id);
   }
 
@@ -176,6 +187,7 @@ export function AddApplicationModal({ open, onClose }: AddApplicationModalProps)
         cover_letter_id: emptyToNull(values.cover_letter_id),
         scrape_status: (values.scrape_status || "manual") as ScrapeStatus,
         notes: emptyToNull(values.notes),
+        tags: parseTagsInput(values.tags),
       });
       onClose();
       navigate(`/applications/${created.id}`);
@@ -457,6 +469,21 @@ export function AddApplicationModal({ open, onClose }: AddApplicationModalProps)
                     Upload cover letters
                   </Link>
                 </div>
+              </div>
+
+              <div className={`mt-4 ${fieldClass}`}>
+                <label htmlFor="add-tags" className={labelClass}>
+                  Tags
+                </label>
+                <input
+                  id="add-tags"
+                  className={inputClass}
+                  placeholder="e.g. IT Role, Hospitality, Admin"
+                  {...register("tags")}
+                />
+                <p className={hintClass}>
+                  Comma-separated labels to group roles (max 10).
+                </p>
               </div>
 
               <div className={`mt-4 ${fieldClass}`}>

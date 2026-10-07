@@ -17,6 +17,8 @@ export const applicationFormSchema = z.object({
   cover_letter_id: z.string().optional(),
   scrape_status: z.string().optional(),
   notes: z.string().optional(),
+  /** Comma-separated tags in the form; parsed to a string[] on submit. */
+  tags: z.string().optional(),
   status: z.enum(APPLICATION_STATUSES as [string, ...string[]]).optional(),
   status_note: z.string().optional(),
 });

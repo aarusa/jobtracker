@@ -156,6 +156,7 @@ def to_application_out(
         ),
         scrape_status=application.scrape_status,
         notes=application.notes,
+        tags=list(application.tags or []),
         created_at=application.created_at,
         updated_at=application.updated_at,
         status_history=history,

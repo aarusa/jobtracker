@@ -6,6 +6,7 @@ import type { Application } from "../api/applications";
 import { AddApplicationModal } from "../features/applications/AddApplicationModal";
 import {
   useApplicationStats,
+  useApplicationTags,
   useApplications,
   useUpdateApplication,
 } from "../hooks/useApplications";
@@ -20,10 +21,29 @@ import {
 import { StatusSelect } from "../components/StatusSelect";
 import { controlBaseClass, focusRing } from "../lib/formStyles";
 
+function TagChips({ tags }: { tags: string[] }) {
+  if (!tags.length) {
+    return <span className="text-slate-400">—</span>;
+  }
+  return (
+    <ul className="flex flex-wrap gap-1">
+      {tags.map((tag) => (
+        <li
+          key={tag}
+          className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-700"
+        >
+          {tag}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function ApplicationsPage() {
   const [q, setQ] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ApplicationStatus[]>([]);
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [sort, setSort] = useState("-applied_at");
   const [addOpen, setAddOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -32,11 +52,12 @@ export function ApplicationsPage() {
     () => ({
       q: search || undefined,
       status: statusFilter.length ? statusFilter : undefined,
+      tag: tagFilter.length ? tagFilter : undefined,
       sort,
       limit: 50,
       offset: 0,
     }),
-    [search, statusFilter, sort],
+    [search, statusFilter, tagFilter, sort],
   );
 
   const {
@@ -48,6 +69,7 @@ export function ApplicationsPage() {
     isFetching,
   } = useApplications(listParams);
   const statsQuery = useApplicationStats();
+  const tagsQuery = useApplicationTags();
   const updateMutation = useUpdateApplication();
 
   async function handleStatusChange(
@@ -78,8 +100,19 @@ export function ApplicationsPage() {
     );
   }
 
+  function toggleTag(tag: string) {
+    setTagFilter((current) =>
+      current.includes(tag)
+        ? current.filter((item) => item !== tag)
+        : [...current, tag],
+    );
+  }
+
   const items = data?.items ?? [];
   const stats = statsQuery.data;
+  const availableTags = tagsQuery.data?.tags ?? [];
+  const hasActiveFilters =
+    Boolean(search) || statusFilter.length > 0 || tagFilter.length > 0;
 
   return (
     <div>
@@ -208,6 +241,53 @@ export function ApplicationsPage() {
             ) : null}
           </div>
         </div>
+
+        <div>
+          <p className="text-sm font-medium text-slate-700" id="tag-filter-label">
+            Filter by tag
+          </p>
+          {tagsQuery.isLoading ? (
+            <p className="mt-2 text-xs text-slate-500">Loading tags…</p>
+          ) : availableTags.length === 0 ? (
+            <p className="mt-2 text-xs text-slate-500">
+              No tags yet. Add tags when creating or editing an application.
+            </p>
+          ) : (
+            <div
+              className="mt-2 flex flex-wrap gap-2"
+              role="group"
+              aria-labelledby="tag-filter-label"
+            >
+              {availableTags.map((tag) => {
+                const active = tagFilter.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => toggleTag(tag)}
+                    className={
+                      active
+                        ? "rounded-md bg-teal-700 px-2.5 py-1 text-xs font-medium text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+                        : "rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+                    }
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+              {tagFilter.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setTagFilter([])}
+                  className="text-xs font-medium text-slate-500 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+          )}
+        </div>
       </section>
 
       {actionError ? (
@@ -252,7 +332,7 @@ export function ApplicationsPage() {
 
         {!isLoading && !isError && items.length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-10 text-center">
-            {search || statusFilter.length > 0 ? (
+            {hasActiveFilters ? (
               <>
                 <p className="text-sm text-slate-600">
                   No applications match your search or filters.
@@ -263,6 +343,7 @@ export function ApplicationsPage() {
                     setQ("");
                     setSearch("");
                     setStatusFilter([]);
+                    setTagFilter([]);
                   }}
                   className="mt-3 text-sm font-medium text-teal-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
                 >
@@ -293,6 +374,7 @@ export function ApplicationsPage() {
                 <thead className="bg-slate-50 text-xs font-medium uppercase tracking-wide text-slate-500">
                   <tr>
                     <th className="px-4 py-3">Company / Title</th>
+                    <th className="px-4 py-3">Tags</th>
                     <th className="whitespace-nowrap px-4 py-3">Work type</th>
                     <th className="px-4 py-3">Employment</th>
                     <th className="whitespace-nowrap px-4 py-3">Applied</th>
@@ -310,6 +392,9 @@ export function ApplicationsPage() {
                           {app.company || "Unknown company"}
                         </Link>
                         <p className="text-slate-600">{app.title || "Untitled role"}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <TagChips tags={app.tags ?? []} />
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-slate-700">
                         {WORK_TYPE_LABELS[app.work_type] ?? "—"}
@@ -352,6 +437,9 @@ export function ApplicationsPage() {
                   <p className="text-sm text-slate-600">
                     {app.title || "Untitled role"}
                   </p>
+                  <div className="mt-2">
+                    <TagChips tags={app.tags ?? []} />
+                  </div>
                   <dl className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
                     <div>
                       <dt className="font-medium text-slate-500">Work type</dt>

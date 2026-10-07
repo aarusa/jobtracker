@@ -69,9 +69,9 @@ Scrape result:
 ```
 
 - `scrape_status` on preview responses: `success` (key fields found), `partial` (some fields), `failed` (nothing useful). When saving an application without a scrape, the client may send `manual`.
-- `message`: friendly explanation when partial or failed (e.g. "This site blocks automated access. Please fill in the details manually.").
+- `message`: friendly explanation when partial or failed (e.g. "`indeed.com` blocks automated access… Fill in the details manually").
 - `existing_application_id`: set if the user already saved this normalised URL.
-- Errors: `400` for invalid, blocked, or unresolvable URLs (non-http, private IP, DNS failure, etc.), `422` malformed body. A resolvable site that cannot be fetched (timeout, connection error, empty parse) returns `200` with `scrape_status: "failed"` and a message, not a 5xx.
+- Errors: `400` for invalid, blocked, or unresolvable URLs (non-http, private IP, DNS failure, etc.), `422` malformed body. A resolvable site that cannot be fetched (timeout, connection error, bot challenge / 403, empty parse) returns `200` with `scrape_status: "failed"` and a message, not a 5xx. Sites such as Indeed, LinkedIn, and Seek often block scrapers; the app does not try to bypass that.
 
 ## Applications
 
@@ -83,9 +83,10 @@ Scrape result:
 | PATCH | `/applications/{id}` | Update any editable field, including `status` |
 | DELETE | `/applications/{id}` | Delete (`204`) |
 | GET | `/applications/stats` | Counts per status |
+| GET | `/applications/tags` | Distinct tags used by the current user |
 
 ### GET /applications
-Query params: `q` (search company or title), `status` (repeatable), `sort` (`applied_at`, `updated_at`; prefix `-` for descending, default `-applied_at`), `limit`, `offset`.
+Query params: `q` (search company or title), `status` (repeatable), `tag` (repeatable; match applications that have **any** of the given tags, case-insensitive), `sort` (`applied_at`, `updated_at`; prefix `-` for descending, default `-applied_at`), `limit`, `offset`.
 
 Response: `{ "items": [Application], "total": 42 }`.
 
@@ -105,16 +106,18 @@ Response: `{ "items": [Application], "total": 42 }`.
   "resume_id": "uuid-or-null",
   "cover_letter_id": "uuid-or-null",
   "scrape_status": "success",
-  "notes": null
+  "notes": null,
+  "tags": ["IT Role", "Admin"]
 }
 ```
 - Only `job_url` is required. `status` is always set to `applied` by the server. `applied_at` defaults to today.
+- `tags` is optional (default `[]`). Max 10 tags, 40 characters each; trimmed and case-insensitively deduped.
 - `resume_id` must be one of the user's documents with kind `resume`; `cover_letter_id` must be kind `cover_letter`. Otherwise `400`.
 - Duplicate normalised URL for this user returns `409` with `{ "detail": "...", "existing_application_id": "uuid" }`.
 - Creates the first `status_history` row (null to `applied`). Returns `201` with the Application.
 
 ### PATCH /applications/{id}
-Partial update. Any field from the create body plus `status` and `notes`. When `status` changes, the server adds a `status_history` row. Optional `status_note` in the body is saved on that row. Returns `200` with the Application.
+Partial update. Any field from the create body plus `status` and `notes`. Send `tags: []` to clear tags. When `status` changes, the server adds a `status_history` row. Optional `status_note` in the body is saved on that row. Returns `200` with the Application.
 
 ### Application object
 ```json
@@ -136,6 +139,7 @@ Partial update. Any field from the create body plus `status` and `notes`. When `
   "cover_letter": { "id": "uuid", "label": "Generic cover letter" },
   "scrape_status": "success",
   "notes": "...",
+  "tags": ["IT Role", "Admin"],
   "created_at": "...",
   "updated_at": "...",
   "status_history": [
@@ -147,6 +151,9 @@ Partial update. Any field from the create body plus `status` and `notes`. When `
 
 ### GET /applications/stats
 `{ "applied": 12, "screening": 3, "interviewing": 2, "offer": 0, "accepted": 0, "rejected": 5, "withdrawn": 1, "total": 23 }`
+
+### GET /applications/tags
+`{ "tags": ["Admin", "Hospitality", "IT Role"] }` — distinct tags across the current user's applications, sorted case-insensitively.
 
 ## Documents
 

@@ -73,10 +73,28 @@ cd frontend && npm run build
 | [docs/API.md](docs/API.md) | REST endpoints and payloads |
 | [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Tables, enums, relationships |
 | [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) | Ordered build steps |
+| [docs/DEPLOY.md](docs/DEPLOY.md) | Production Docker and hosting |
 | [.cursor/rules/project.mdc](.cursor/rules/project.mdc) | Coding conventions for the AI |
+
+## Production / deploy
+
+See **[docs/DEPLOY.md](docs/DEPLOY.md)** for:
+
+- Production Dockerfiles (`backend/Dockerfile`, `frontend/Dockerfile`)
+- Environment variable checklist (`COOKIE_SECURE`, `COOKIE_SAMESITE`, `CORS_ORIGINS`, managed Postgres)
+- Step-by-step hosting (Vercel/Netlify frontend + Render/Fly.io backend)
+
+Optional local production-like stack:
+
+```bash
+export SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(64))')"
+export POSTGRES_PASSWORD=choose-a-strong-password
+docker compose -f docker-compose.prod.yml up --build
+```
 
 ## Security notes
 
 - Never commit `.env`, `uploads/`, `.venv/`, or `node_modules/`
 - Set a strong `SECRET_KEY` and use `COOKIE_SECURE=true` behind HTTPS in production
+- For a frontend on a different origin than the API, set `COOKIE_SAMESITE=none` and build the frontend with `VITE_API_BASE_URL`
 - Tokens stay in the httpOnly cookie — not in `localStorage`

@@ -26,6 +26,7 @@ def _create_application(
     company: str = "Example",
     resume_id: str | None = None,
     cover_letter_id: str | None = None,
+    tags: list[str] | None = None,
 ) -> dict:
     payload: dict = {
         "job_url": url,
@@ -37,6 +38,8 @@ def _create_application(
         payload["resume_id"] = resume_id
     if cover_letter_id is not None:
         payload["cover_letter_id"] = cover_letter_id
+    if tags is not None:
+        payload["tags"] = tags
     response = client.post("/api/applications", json=payload)
     assert response.status_code == 201, response.text
     return response.json()
@@ -229,3 +232,48 @@ def test_update_clears_resume_link(client: TestClient) -> None:
     assert response.status_code == 200
     assert response.json()["resume"] is None
     assert response.json()["notes"] == "Updated notes"
+
+
+def test_application_tags_create_filter_and_update(client: TestClient) -> None:
+    register_and_login(client, email="tags@example.com")
+    it_role = _create_application(
+        client,
+        url="https://example.com/jobs/it",
+        title="Backend Engineer",
+        company="Tech Co",
+        tags=["IT Role", "  admin  ", "it role"],
+    )
+    assert it_role["tags"] == ["IT Role", "admin"]
+
+    hospitality = _create_application(
+        client,
+        url="https://example.com/jobs/hospo",
+        title="Barista",
+        company="Cafe",
+        tags=["Hospitality"],
+    )
+    assert hospitality["tags"] == ["Hospitality"]
+
+    tags_list = client.get("/api/applications/tags")
+    assert tags_list.status_code == 200
+    assert tags_list.json()["tags"] == ["admin", "Hospitality", "IT Role"]
+
+    by_tag = client.get(
+        "/api/applications",
+        params=[("tag", "it role"), ("tag", "missing")],
+    )
+    assert by_tag.status_code == 200
+    assert by_tag.json()["total"] == 1
+    assert by_tag.json()["items"][0]["id"] == it_role["id"]
+
+    by_hospo = client.get("/api/applications", params={"tag": "Hospitality"})
+    assert by_hospo.json()["total"] == 1
+    assert by_hospo.json()["items"][0]["id"] == hospitality["id"]
+
+    cleared = client.patch(
+        f"/api/applications/{hospitality['id']}",
+        json={"tags": []},
+    )
+    assert cleared.status_code == 200
+    assert cleared.json()["tags"] == []
+    assert client.get("/api/applications", params={"tag": "Hospitality"}).json()["total"] == 0

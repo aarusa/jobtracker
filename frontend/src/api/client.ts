@@ -5,6 +5,13 @@ export type User = {
   created_at: string;
 };
 
+/** Empty in local Vite (proxy). Set VITE_API_BASE_URL for split production hosting. */
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
+
+function apiUrl(path: string): string {
+  return `${API_BASE}${path}`;
+}
+
 export class ApiError extends Error {
   status: number;
   detail: string;
@@ -39,7 +46,7 @@ export async function apiFetch<T>(
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(path, {
+  const response = await fetch(apiUrl(path), {
     ...init,
     headers,
     credentials: "include",
@@ -91,7 +98,7 @@ export async function apiDownload(
 }
 
 export async function apiBlob(path: string): Promise<Blob> {
-  const response = await fetch(path, { credentials: "include" });
+  const response = await fetch(apiUrl(path), { credentials: "include" });
   if (!response.ok) {
     let detail = "Request failed";
     const contentType = response.headers.get("Content-Type") ?? "";

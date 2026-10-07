@@ -35,6 +35,7 @@ export type Application = {
   cover_letter: DocumentRef | null;
   scrape_status: ScrapeStatus | null;
   notes: string | null;
+  tags: string[];
   created_at: string;
   updated_at: string;
   status_history?: StatusHistoryItem[];
@@ -71,6 +72,7 @@ export type ApplicationCreatePayload = {
   cover_letter_id?: string | null;
   scrape_status?: ScrapeStatus | null;
   notes?: string | null;
+  tags?: string[];
 };
 
 export type ApplicationUpdatePayload = Partial<ApplicationCreatePayload> & {
@@ -81,6 +83,7 @@ export type ApplicationUpdatePayload = Partial<ApplicationCreatePayload> & {
 export type ListApplicationsParams = {
   q?: string;
   status?: ApplicationStatus[];
+  tag?: string[];
   sort?: string;
   limit?: number;
   offset?: number;
@@ -97,10 +100,17 @@ export function listApplications(
   for (const status of params.status ?? []) {
     search.append("status", status);
   }
+  for (const tag of params.tag ?? []) {
+    search.append("tag", tag);
+  }
   const query = search.toString();
   return apiFetch<ApplicationListResponse>(
     `/api/applications${query ? `?${query}` : ""}`,
   );
+}
+
+export function listApplicationTags(): Promise<{ tags: string[] }> {
+  return apiFetch<{ tags: string[] }>("/api/applications/tags");
 }
 
 export function getApplicationStats(): Promise<ApplicationStats> {

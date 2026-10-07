@@ -47,6 +47,15 @@ class UnsafeUrlError(ValueError):
     """Raised when a URL is invalid or blocked by SSRF rules."""
 
 
+class SiteBlockedError(RuntimeError):
+    """Raised when the remote site refuses the request (bot protection / auth wall)."""
+
+    def __init__(self, status_code: int, *, domain: str) -> None:
+        self.status_code = status_code
+        self.domain = domain
+        super().__init__(f"{domain} returned HTTP {status_code}")
+
+
 @dataclass
 class ScrapedJob:
     job_url: str
@@ -644,6 +653,30 @@ def _apply_heuristics(job: ScrapedJob, soup: BeautifulSoup) -> None:
         _set_if_empty(job, "work_type", mapped)
 
 
+def _looks_like_bot_challenge(html: str) -> bool:
+    """Detect Cloudflare / captcha interstitial pages (e.g. Indeed Security Check)."""
+    sample = html[:20_000].lower()
+    markers = (
+        "security check",
+        "cf-browser-verification",
+        "cf-challenge",
+        "attention required",
+        "captcha",
+        "indeed_cloudflare_static_page",
+        "enable javascript and cookies to continue",
+        "unusual traffic",
+        "verify you are human",
+    )
+    return any(marker in sample for marker in markers)
+
+
+def blocked_site_message(domain: str) -> str:
+    return (
+        f"{domain} blocks automated access (bot protection or a login wall). "
+        "Fill in the details manually — the form still works."
+    )
+
+
 def _finalize_status(job: ScrapedJob) -> ScrapedJob:
     has_title = bool(job.title)
     has_company = bool(job.company)
@@ -672,6 +705,11 @@ def parse_job_html(html: str, url: str) -> ScrapedJob:
         job_url_normalized=normalized,
         source_domain=source_domain_from_url(normalized),
     )
+    if _looks_like_bot_challenge(html):
+        job.scrape_status = ScrapeStatus.failed
+        job.message = blocked_site_message(job.source_domain)
+        return job
+
     soup = BeautifulSoup(html, "lxml")
     _apply_jsonld(job, soup)
     _apply_opengraph(job, soup)
@@ -708,7 +746,6 @@ def fetch_job_html(
                         raise UnsafeUrlError("Redirect missing Location header")
                     current = normalize_url(urljoin(str(response.url), location))
                     continue
-                response.raise_for_status()
 
                 content_type = response.headers.get("content-type", "")
                 if content_type and any(
@@ -724,7 +761,20 @@ def fetch_job_html(
                     if total > settings.scrape_max_bytes:
                         raise httpx.HTTPError("Response exceeded maximum size")
                     chunks.append(chunk)
-                return b"".join(chunks).decode(response.encoding or "utf-8", errors="replace")
+                body = b"".join(chunks).decode(
+                    response.encoding or "utf-8", errors="replace"
+                )
+
+                if response.status_code in {401, 403, 429, 503}:
+                    raise SiteBlockedError(
+                        response.status_code,
+                        domain=source_domain_from_url(current),
+                    )
+
+                if response.status_code >= 400:
+                    response.raise_for_status()
+
+                return body
 
         raise UnsafeUrlError("Too many redirects")
     finally:
@@ -747,17 +797,26 @@ def scrape_job_url(
     except UnsafeUrlError:
         raise
 
+    domain = source_domain_from_url(normalized)
     try:
         html = fetch_job_html(normalized, settings=settings, client=client)
     except UnsafeUrlError:
         raise
+    except SiteBlockedError as exc:
+        return ScrapedJob(
+            job_url=original,
+            job_url_normalized=normalized,
+            source_domain=exc.domain or domain,
+            scrape_status=ScrapeStatus.failed,
+            message=blocked_site_message(exc.domain or domain),
+        )
     except Exception:
         return ScrapedJob(
             job_url=original,
             job_url_normalized=normalized,
-            source_domain=source_domain_from_url(normalized),
+            source_domain=domain,
             scrape_status=ScrapeStatus.failed,
-            message=("Could not reach this job page. Please fill in the details manually."),
+            message="Could not reach this job page. Please fill in the details manually.",
         )
 
     job = parse_job_html(html, original)
@@ -765,5 +824,5 @@ def scrape_job_url(
     job.job_url = original
     job.job_url_normalized = normalized
     if job.scrape_status == ScrapeStatus.failed and not job.message:
-        job.message = "This site may block automated access. Please fill in the details manually."
+        job.message = blocked_site_message(domain)
     return job

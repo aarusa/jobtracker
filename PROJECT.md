@@ -68,8 +68,9 @@ Primary user: a job seeker managing many applications at once.
 - Files are only downloadable by their owner.
 
 ### 3.5 Application list and detail
-- List: company/title, work type, employment type, applied date, status dropdown. Search by company or title. Filter by status. Sort by applied date or last updated. Open detail via the company name.
-- Detail: all fields editable, notes, resume and cover letter dropdowns, status history, link to the original job URL, and delete.
+- List: company/title, tags, work type, employment type, applied date, status dropdown. Search by company or title. Filter by status and by tag. Sort by applied date or last updated. Open detail via the company name.
+- Detail: all fields editable, tags, notes, resume and cover letter dropdowns, status history, link to the original job URL, and delete.
+- Tags are free-text labels entered by the user (e.g. IT Role, Hospitality, Admin); up to 10 per application.
 - Simple summary counts per status at the top of the list.
 
 ## 4. Tech stack

@@ -5,6 +5,7 @@ import {
   deleteApplication,
   getApplication,
   getApplicationStats,
+  listApplicationTags,
   listApplications,
   updateApplication,
   type ApplicationCreatePayload,
@@ -15,6 +16,7 @@ import { scrapePreview } from "../api/scrape";
 
 export const applicationsQueryKey = ["applications"] as const;
 export const applicationStatsQueryKey = ["applications", "stats"] as const;
+export const applicationTagsQueryKey = ["applications", "tags"] as const;
 
 export function useApplications(params: ListApplicationsParams) {
   return useQuery({
@@ -30,6 +32,13 @@ export function useApplicationStats() {
   });
 }
 
+export function useApplicationTags() {
+  return useQuery({
+    queryKey: applicationTagsQueryKey,
+    queryFn: listApplicationTags,
+  });
+}
+
 export function useApplication(id: string | undefined) {
   return useQuery({
     queryKey: [...applicationsQueryKey, "detail", id],
@@ -41,6 +50,7 @@ export function useApplication(id: string | undefined) {
 function invalidateApplications(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: applicationsQueryKey });
   void queryClient.invalidateQueries({ queryKey: applicationStatsQueryKey });
+  void queryClient.invalidateQueries({ queryKey: applicationTagsQueryKey });
 }
 
 export function useCreateApplication() {

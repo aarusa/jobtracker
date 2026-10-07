@@ -17,6 +17,7 @@ from app.schemas.applications import (
     ApplicationListOut,
     ApplicationOut,
     ApplicationStatsOut,
+    ApplicationTagsOut,
     ApplicationUpdate,
 )
 from app.services.applications import (
@@ -30,6 +31,8 @@ from app.services.applications import (
     touch_updated_at,
     validate_document_link,
 )
+from app.services.tags import collect_user_tags, normalize_tags, tags_overlap_filter
+
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
@@ -64,12 +67,24 @@ def application_stats(
     return ApplicationStatsOut(**counts, total=total)
 
 
+@router.get("/tags", response_model=ApplicationTagsOut)
+def list_application_tags(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ApplicationTagsOut:
+    return ApplicationTagsOut(tags=collect_user_tags(db, user_id=current_user.id))
+
+
 @router.get("", response_model=ApplicationListOut)
 def list_applications(
     q: str | None = None,
     status_filter: Annotated[
         list[ApplicationStatus] | None,
         Query(alias="status"),
+    ] = None,
+    tag_filter: Annotated[
+        list[str] | None,
+        Query(alias="tag"),
     ] = None,
     sort: str = "-applied_at",
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
@@ -84,6 +99,9 @@ def list_applications(
         filters.append(or_(Application.company.ilike(pattern), Application.title.ilike(pattern)))
     if status_filter:
         filters.append(Application.status.in_(status_filter))
+    tag_clause = tags_overlap_filter(tag_filter or [])
+    if tag_clause is not None:
+        filters.append(tag_clause)
 
     total = db.scalar(select(func.count()).select_from(Application).where(*filters)) or 0
 
@@ -159,6 +177,7 @@ def create_application(
         cover_letter_id=body.cover_letter_id,
         scrape_status=body.scrape_status,
         notes=body.notes,
+        tags=normalize_tags(body.tags),
     )
     db.add(application)
     db.flush()
@@ -239,6 +258,9 @@ def update_application(
         application.cover_letter_id = data.pop("cover_letter_id")
         if application.cover_letter_id is None:
             application.cover_letter = None
+
+    if "tags" in data:
+        application.tags = normalize_tags(data.pop("tags"))
 
     for field_name, value in data.items():
         setattr(application, field_name, value)

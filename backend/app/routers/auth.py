@@ -49,7 +49,7 @@ def _set_access_cookie(
         key=COOKIE_NAME,
         value=token,
         httponly=True,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
         secure=settings.cookie_secure,
         max_age=max_age_seconds,
         path="/",
@@ -61,7 +61,7 @@ def _clear_access_cookie(response: Response, settings: Settings) -> None:
         key=COOKIE_NAME,
         path="/",
         httponly=True,
-        samesite="lax",
+        samesite=settings.cookie_samesite,
         secure=settings.cookie_secure,
     )
 

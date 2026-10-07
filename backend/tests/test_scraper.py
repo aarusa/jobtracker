@@ -8,6 +8,7 @@ import pytest
 
 from app.models.enums import ScrapeStatus, WorkType
 from app.services.scraper import (
+    SiteBlockedError,
     UnsafeUrlError,
     assert_url_is_safe,
     fetch_job_html,
@@ -169,3 +170,75 @@ def test_scrape_job_url_network_error_returns_failed(
     job = scrape_job_url("https://example.com/jobs/1")
     assert job.scrape_status == ScrapeStatus.failed
     assert job.message is not None
+
+
+def test_parse_bot_challenge_fixture() -> None:
+    html = (FIXTURES / "indeed_security_check.html").read_text(encoding="utf-8")
+    job = parse_job_html(html, "https://au.indeed.com/viewjob?jk=abc")
+    assert job.scrape_status == ScrapeStatus.failed
+    assert job.title is None
+    assert job.message is not None
+    assert "blocks automated access" in job.message
+    assert "indeed.com" in job.message
+
+
+def test_fetch_403_raises_site_blocked(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "app.services.scraper.socket.getaddrinfo",
+        lambda *args, **kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))
+        ],
+    )
+
+    class FakeResponse:
+        status_code = 403
+        is_redirect = False
+        headers = {"content-type": "text/html"}
+        url = "https://au.indeed.com/viewjob?jk=abc"
+        encoding = "utf-8"
+
+        def iter_bytes(self):
+            yield b"<html><title>Security Check</title></html>"
+
+        def __enter__(self) -> FakeResponse:
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def raise_for_status(self) -> None:
+            raise httpx.HTTPStatusError(
+                "403", request=httpx.Request("GET", self.url), response=httpx.Response(403)
+            )
+
+    class FakeClient:
+        def stream(self, method: str, url: str):
+            return FakeResponse()
+
+        def close(self) -> None:
+            return None
+
+    with pytest.raises(SiteBlockedError) as exc_info:
+        fetch_job_html(
+            "https://au.indeed.com/viewjob?jk=abc",
+            client=FakeClient(),  # type: ignore[arg-type]
+        )
+    assert exc_info.value.status_code == 403
+
+
+def test_scrape_job_url_site_blocked_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "app.services.scraper.socket.getaddrinfo",
+        lambda *args, **kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))
+        ],
+    )
+
+    def blocked(*args: object, **kwargs: object) -> str:
+        raise SiteBlockedError(403, domain="au.indeed.com")
+
+    monkeypatch.setattr("app.services.scraper.fetch_job_html", blocked)
+    job = scrape_job_url("https://au.indeed.com/viewjob?jk=0a7d303e7a90deae")
+    assert job.scrape_status == ScrapeStatus.failed
+    assert "au.indeed.com" in (job.message or "")
+    assert "blocks automated access" in (job.message or "")

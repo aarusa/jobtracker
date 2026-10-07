@@ -36,6 +36,7 @@ import {
   fieldClass,
   fieldGridClass,
   focusRing,
+  hintClass,
   inputClass,
   labelClass,
   sectionClass,
@@ -44,6 +45,7 @@ import {
   selectClass,
   textareaClass,
 } from "../lib/formStyles";
+import { formatTagsInput, parseTagsInput } from "../lib/tags";
 
 function emptyToNull(value: string | undefined): string | null {
   const trimmed = value?.trim() ?? "";
@@ -91,6 +93,7 @@ export function ApplicationDetailPage() {
       cover_letter_id: data.cover_letter?.id ?? "",
       scrape_status: data.scrape_status ?? "manual",
       notes: data.notes ?? "",
+      tags: formatTagsInput(data.tags),
       status: data.status,
       status_note: "",
     });
@@ -123,6 +126,7 @@ export function ApplicationDetailPage() {
         cover_letter_id: emptyToNull(values.cover_letter_id),
         scrape_status: (values.scrape_status || null) as ScrapeStatus | null,
         notes: emptyToNull(values.notes),
+        tags: parseTagsInput(values.tags),
         status: values.status as ApplicationStatus,
         status_note: statusNote.trim() || null,
       };
@@ -389,6 +393,20 @@ export function ApplicationDetailPage() {
                 ))}
               </select>
             </div>
+          </div>
+          <div className={`mt-4 ${fieldClass}`}>
+            <label htmlFor="tags" className={labelClass}>
+              Tags
+            </label>
+            <input
+              id="tags"
+              className={inputClass}
+              placeholder="e.g. IT Role, Hospitality, Admin"
+              {...register("tags")}
+            />
+            <p className={hintClass}>
+              Comma-separated labels to group roles (max 10).
+            </p>
           </div>
           <div className={`mt-4 ${fieldClass}`}>
             <label htmlFor="notes" className={labelClass}>

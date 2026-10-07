@@ -3,9 +3,10 @@ from __future__ import annotations
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
 from app.models.enums import ApplicationStatus, ScrapeStatus, WorkType
+from app.services.tags import normalize_tags
 
 
 class DocumentRef(BaseModel):
@@ -39,6 +40,16 @@ class ApplicationCreate(BaseModel):
     cover_letter_id: UUID | None = None
     scrape_status: ScrapeStatus | None = None
     notes: str | None = None
+    tags: list[str] = Field(default_factory=list)
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def validate_tags(cls, value: object) -> list[str]:
+        if value is None:
+            return []
+        if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+            raise ValueError("tags must be a list of strings")
+        return normalize_tags(value)
 
 
 class ApplicationUpdate(BaseModel):
@@ -56,8 +67,18 @@ class ApplicationUpdate(BaseModel):
     cover_letter_id: UUID | None = None
     scrape_status: ScrapeStatus | None = None
     notes: str | None = None
+    tags: list[str] | None = None
     status: ApplicationStatus | None = None
     status_note: str | None = None
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def validate_tags(cls, value: object) -> list[str] | None:
+        if value is None:
+            return None
+        if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+            raise ValueError("tags must be a list of strings")
+        return normalize_tags(value)
 
 
 class ApplicationOut(BaseModel):
@@ -80,6 +101,7 @@ class ApplicationOut(BaseModel):
     cover_letter: DocumentRef | None = None
     scrape_status: ScrapeStatus | None = None
     notes: str | None = None
+    tags: list[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
     status_history: list[StatusHistoryOut] | None = None
@@ -106,8 +128,13 @@ class ApplicationListItem(BaseModel):
     cover_letter: DocumentRef | None = None
     scrape_status: ScrapeStatus | None = None
     notes: str | None = None
+    tags: list[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
+
+
+class ApplicationTagsOut(BaseModel):
+    tags: list[str]
 
 
 class ApplicationListOut(BaseModel):

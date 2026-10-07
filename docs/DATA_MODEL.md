@@ -54,6 +54,7 @@ erDiagram
         uuid cover_letter_id FK
         enum scrape_status
         text notes
+        text[] tags
         timestamptz created_at
         timestamptz updated_at
     }
@@ -127,13 +128,15 @@ Files live in storage (local disk in dev). The database stores metadata only, ne
 | cover_letter_id | uuid | FK to documents, ON DELETE SET NULL, nullable |
 | scrape_status | scrape_status | how the data was obtained |
 | notes | text | user notes, nullable |
+| tags | text[] | user-defined labels (e.g. IT Role, Hospitality); default `{}` |
 | created_at | timestamptz | default now() |
 | updated_at | timestamptz | updated on every change |
 
 **Constraints and indexes**
 - Unique: `(user_id, job_url_normalized)` to prevent duplicates.
-- Index: `(user_id, status)`, `(user_id, applied_at DESC)`, `(user_id, updated_at DESC)`.
+- Index: `(user_id, status)`, `(user_id, applied_at DESC)`, `(user_id, updated_at DESC)`, GIN on `tags`.
 - Application layer check: `resume_id` must reference a document with `kind = 'resume'` and the same `user_id`; `cover_letter_id` must reference `kind = 'cover_letter'` and the same `user_id`.
+- Tags: max 10 per application, max 40 characters each; trimmed and case-insensitively deduped on write.
 
 ### status_history
 | Column | Type | Notes |
