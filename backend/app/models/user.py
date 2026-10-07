@@ -44,5 +44,11 @@ class User(Base):
         nullable=False,
     )
 
-    documents: Mapped[list[Document]] = relationship(back_populates="user")
-    applications: Mapped[list[Application]] = relationship(back_populates="user")
+    documents: Mapped[list[Document]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    applications: Mapped[list[Application]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )

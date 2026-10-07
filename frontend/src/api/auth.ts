@@ -82,8 +82,9 @@ export function updateProfile(payload: UpdateProfilePayload): Promise<User> {
 }
 
 export function deleteAccount(payload: DeleteAccountPayload): Promise<void> {
-  return apiFetch<void>("/api/auth/me", {
-    method: "DELETE",
+  // POST avoids DELETE-with-body proxy issues in the Vite dev server.
+  return apiFetch<void>("/api/auth/delete-account", {
+    method: "POST",
     body: JSON.stringify(payload),
   });
 }

@@ -27,14 +27,15 @@ Base path: `/api`. Format: JSON unless noted. Auth: httpOnly cookie named `acces
 | POST | `/auth/logout` | none | `204`; clears cookie |
 | GET | `/auth/me` | none | `200` current user object |
 | PATCH | `/auth/me` | `{ name?, current_password?, new_password? }` | `200` updated user object |
-| DELETE | `/auth/me` | `{ password }` | `204`; deletes account and clears cookie |
+| POST | `/auth/delete-account` | `{ password }` | `204`; deletes account and clears cookie |
+| DELETE | `/auth/me` | `{ password }` | `204`; same as delete-account (kept for compatibility) |
 
 User object: `{ id, name, email, created_at }`. Email cannot be changed after registration.
 
 Rules: password minimum 8 characters; email unique (case-insensitive); names are stored title-cased; login and register (and password-reset endpoints) are rate limited; login errors never reveal whether the email exists (`401 Invalid email or password`).
 
 - `PATCH /auth/me`: update name and/or password. Changing password requires `current_password`. At least one of `name` or `new_password` is required. Email is never accepted. Changing password bumps `session_version` (invalidates other sessions) and clears the current cookie so the user must log in again.
-- `DELETE /auth/me`: requires the current password. Deletes the user, cascaded applications/history, document records, and stored files.
+- `POST /auth/delete-account` (preferred) and `DELETE /auth/me`: require the current password. Delete the user, applications, status history, document records, and stored files, then clear the cookie.
 - Password reset also bumps `session_version` so any existing logged-in sessions stop working.
 
 - `remember_me` (default `false`): when `true`, the JWT and cookie last `REMEMBER_ME_EXPIRE_DAYS` (default 30 days) instead of `ACCESS_TOKEN_EXPIRE_MINUTES`.

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.config import Settings, get_settings
 from app.db import get_db
 from app.deps import get_current_user
-from app.models import Document, User
+from app.models import Application, Document, User
 from app.schemas.auth import (
     DeleteAccountRequest,
     ForgotPasswordRequest,
@@ -253,14 +253,14 @@ def update_me(
     return current_user
 
 
-@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
-def delete_me(
+def _delete_current_user_account(
+    *,
     body: DeleteAccountRequest,
     response: Response,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    settings: Settings = Depends(get_settings),
-    storage: Storage = Depends(get_storage),
+    db: Session,
+    current_user: User,
+    settings: Settings,
+    storage: Storage,
 ) -> None:
     if not verify_password(body.password, current_user.password_hash):
         raise HTTPException(
@@ -273,8 +273,62 @@ def delete_me(
             select(Document.storage_key).where(Document.user_id == current_user.id)
         ).all()
     )
+
+    # Delete children explicitly so SQLAlchemy does not NULL out required FKs.
+    applications = db.scalars(
+        select(Application).where(Application.user_id == current_user.id)
+    ).all()
+    for application in applications:
+        db.delete(application)
+
+    documents = db.scalars(
+        select(Document).where(Document.user_id == current_user.id)
+    ).all()
+    for document in documents:
+        db.delete(document)
+
     db.delete(current_user)
     db.commit()
+
     for key in storage_keys:
         storage.delete(key)
     _clear_access_cookie(response, settings)
+
+
+@router.post("/delete-account", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(
+    body: DeleteAccountRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    settings: Settings = Depends(get_settings),
+    storage: Storage = Depends(get_storage),
+) -> None:
+    """Preferred delete endpoint (POST body is reliably proxied by Vite)."""
+    _delete_current_user_account(
+        body=body,
+        response=response,
+        db=db,
+        current_user=current_user,
+        settings=settings,
+        storage=storage,
+    )
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_me(
+    body: DeleteAccountRequest,
+    response: Response,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    settings: Settings = Depends(get_settings),
+    storage: Storage = Depends(get_storage),
+) -> None:
+    _delete_current_user_account(
+        body=body,
+        response=response,
+        db=db,
+        current_user=current_user,
+        settings=settings,
+        storage=storage,
+    )

@@ -167,9 +167,8 @@ def test_profile_endpoints_require_auth(client: TestClient) -> None:
         client.patch("/api/auth/me", json={"name": "Nope"}).status_code == 401
     )
     assert (
-        client.request(
-            "DELETE",
-            "/api/auth/me",
+        client.post(
+            "/api/auth/delete-account",
             json={"password": "password123"},
         ).status_code
         == 401
@@ -187,16 +186,14 @@ def test_update_profile_wrong_current_password(client: TestClient) -> None:
 
 def test_delete_account(client: TestClient) -> None:
     _register(client, email="gone@example.com", password="password123")
-    bad = client.request(
-        "DELETE",
-        "/api/auth/me",
+    bad = client.post(
+        "/api/auth/delete-account",
         json={"password": "wrong"},
     )
     assert bad.status_code == 401
 
-    response = client.request(
-        "DELETE",
-        "/api/auth/me",
+    response = client.post(
+        "/api/auth/delete-account",
         json={"password": "password123"},
     )
     assert response.status_code == 204
@@ -205,6 +202,33 @@ def test_delete_account(client: TestClient) -> None:
         client.post(
             "/api/auth/login",
             json={"email": "gone@example.com", "password": "password123"},
+        ).status_code
+        == 401
+    )
+
+
+def test_delete_account_with_applications(client: TestClient) -> None:
+    _register(client, email="withapps@example.com", password="password123")
+    created = client.post(
+        "/api/applications",
+        json={
+            "job_url": "https://example.com/jobs/delete-with-app",
+            "company": "Acme",
+            "title": "Engineer",
+        },
+    )
+    assert created.status_code == 201
+
+    response = client.post(
+        "/api/auth/delete-account",
+        json={"password": "password123"},
+    )
+    assert response.status_code == 204
+    client.cookies.clear()
+    assert (
+        client.post(
+            "/api/auth/login",
+            json={"email": "withapps@example.com", "password": "password123"},
         ).status_code
         == 401
     )
